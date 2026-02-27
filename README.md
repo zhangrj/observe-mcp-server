@@ -12,8 +12,6 @@ Transports supported (FastMCP):
 ## Install
 ```bash
 uv sync
-# or
-uv add fastmcp httpx pydantic pydantic-settings structlog
 ```
 
 ## Configure
@@ -22,6 +20,8 @@ Copy .env.example to .env and edit.
 ## Run
 ### STDIO (default)
 ```bash
+source .venv/bin/activate  # On Unix/macOS
+.venv\Scripts\activate     # On Windows
 observe-mcp-server
 # or
 python -m observe_mcp_server

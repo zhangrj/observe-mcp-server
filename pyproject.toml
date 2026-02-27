@@ -16,8 +16,11 @@ dependencies = [
 ]
 
 [project.scripts]
-observe-mcp-server = "observe_mcp_server:main"
+observe-mcp-server = "observe_mcp_server.__main__:main"
 
 [build-system]
-requires = ["uv_build>=0.10.6,<0.11.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
