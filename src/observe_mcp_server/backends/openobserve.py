@@ -58,3 +58,19 @@ class OpenObserveBackend:
                 text = (resp.text or "")[:1200]
                 raise RuntimeError(f"OpenObserve search failed: HTTP {resp.status_code}: {text}")
             return resp.json()
+        
+    async def list_stream_schema(self, stream_name: str, stream_type: StreamType) -> Dict[str, Any]:
+        # GET /api/{organization}/streams/{streamName}/schema?type={StreamType} [3](https://openobserve.ai/docs/api/stream/schema/)
+        url = self._url(f"/api/{self.settings.org}/streams/{stream_name}/schema")
+        params = {"type": stream_type.value}
+
+        async with httpx.AsyncClient(
+            timeout=self.settings.timeout_seconds,
+            verify=self.settings.verify_ssl,
+            headers={**self._auth_header(), "Accept": "application/json"},
+        ) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code >= 400:
+                text = (resp.text or "")[:1000]
+                raise RuntimeError(f"OpenObserve list_stream_schema failed: HTTP {resp.status_code}: {text}")
+            return resp.json()

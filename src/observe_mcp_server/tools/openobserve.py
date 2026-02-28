@@ -168,3 +168,40 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         except Exception as e:
             log.error("failure", error=str(e))
             raise ToolError(f"openobserve_logs_query failed: {e}")
+        
+    @mcp.tool(
+        name=tool_name("openobserve_list_stream_schema"),
+        description=(
+            "【OpenObserve】获取指定 stream 的 schema。\n"
+            "对应 OpenObserve API：GET /api/{org}/{stream}/schema。\n"
+            "核心参数：\n"
+            "  - stream：stream 名称（来自 openobserve_stream_list）\n"
+            "  - stream_type：stream 类型（logs/metrics/traces），默认 logs\n"
+            " 适用场景： 获取 stream 的字段名/类型信息，辅助构造查询条件（如 where/order_by 中的字段）。\n"
+        ),
+        tags={"openobserve", "stream", "schema"},
+        meta={"backend": "openobserve", "phase": "1"},
+    )
+    async def openobserve_list_stream_schema(
+        stream: Annotated[str, Field(description="stream 名称，例如 k8s（来自 openobserve_stream_list）")],
+        stream_type: Annotated[StreamType, Field(description="Stream 类型：logs | metrics | traces")] = StreamType.logs,
+    ) -> Dict[str, Any]:
+        """
+        OpenObserve Get Stream Schema.
+
+        - Endpoint: GET /api/{organization}/{stream}/schema
+        """
+        req_id = str(uuid.uuid4())
+        log = logger.bind(req_id=req_id, tool="openobserve_list_stream_schema")
+        log.info("request", stream=stream)
+        
+        try:
+            settings = OpenObserveSettings() # type: ignore
+            backend = OpenObserveBackend(settings)
+            data = await backend.list_stream_schema(stream, stream_type)
+            log.info("success")
+            return {"data": data}
+        except Exception as e:
+            log.error("failure", error=str(e))
+            raise ToolError(f"openobserve_list_stream_schema failed: {e}")
+
