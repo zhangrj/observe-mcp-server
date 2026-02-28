@@ -18,7 +18,7 @@ class OpenObserveStream(BaseModel):
     storage_type: Optional[str] = None
     stream_type: Optional[str] = None
     stats: Optional[Dict[str, Any]] = None
-    schema: Optional[List[Dict[str, Any]]] = None
+    schema_: Optional[List[Dict[str, Any]]] = Field(default=None, alias="schema")
     settings: Optional[Dict[str, Any]] = None
 
 

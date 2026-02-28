@@ -22,6 +22,7 @@ Copy .env.example to .env and edit.
 ```bash
 source .venv/bin/activate  # On Unix/macOS
 .venv\Scripts\activate     # On Windows
+uv pip install -e .
 observe-mcp-server
 # or
 python -m observe_mcp_server
