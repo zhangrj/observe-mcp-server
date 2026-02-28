@@ -1,7 +1,7 @@
 [project]
 name = "observe-mcp-server"
 version = "0.1.0"
-description = "Add your description here"
+description = "An MCP server that can be used to query logs, metrics, and traces from Openobserve, prometheus, and Skywalking."
 readme = "README.md"
 authors = [
     { name = "rongjie.zhang", email = "rongjie.zhang@shell.com" }
