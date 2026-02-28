@@ -62,6 +62,7 @@ class OpenObserveSettings(BaseSettings):
 
     # Guardrails for LLM-driven queries
     max_page_size: int = 500
+    stream_catalog_path: str = ""  # If set, used for describe streams; should be a JSON file with stream metadata
 
 
 # Future placeholders (Phase-2)

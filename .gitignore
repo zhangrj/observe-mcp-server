@@ -11,3 +11,4 @@ wheels/
 
 # configuration file
 .env
+openobserve_stream_catalog.json

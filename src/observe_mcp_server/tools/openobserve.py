@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import json
 from typing import Any, Dict, Optional
 
 from fastmcp.exceptions import ValidationError, ToolError
@@ -33,6 +34,27 @@ def _build_sql(
     return q
 
 
+def _load_stream_catalog(path: str) -> Dict[str, Any]:
+    """
+    Load stream catalog mapping from a JSON file if configured.
+
+    Set env OPENOBSERVE_STREAM_CATALOG_PATH to a JSON file path.
+    Expected format:
+      {
+        "dev_log": {"env":"dev","project":"projectname","kind":"business-log","description":"dev log"},
+        ...
+      }
+    """
+    if not path:
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
+
+
 def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     """
     Register Phase-1 OpenObserve tools.
@@ -52,6 +74,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "Maps to the OpenObserve Streams API: GET /api/{org}/streams?fetchSchema=false&type={StreamType}.\n"
             "Returns the raw OpenObserve response structure: "
             "{ list: [ {name, storage_type, stream_type, stats, (schema?), settings} ... ] }.\n"
+            "This tool may also return a catalog mapping (if configured) to provide human-friendly meaning for stream names."
             "Use cases: discover available stream names before querying, or inspect stream stats / "
             "full-text index field configuration.\n"
         ),
@@ -89,8 +112,17 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             settings = OpenObserveSettings() # type: ignore
             backend = OpenObserveBackend(settings)
             data = await backend.list_streams(stream_type=stream_type, fetch_schema=fetch_schema)
+
+            catalog = _load_stream_catalog(settings.stream_catalog_path)
+            # only keep entries that exist in returned streams
+            try:
+                stream_names = {s.get("name") for s in data.get("list", []) if isinstance(s, dict)}
+                catalog = {k: v for k, v in catalog.items() if k in stream_names}
+            except Exception:
+                pass
+
             log.info("success")
-            return {"data": data}
+            return {"data": data, "catalog": catalog}
         except Exception as e:
             log.error("failure", error=str(e))
             raise ToolError(f"openobserve_stream_list failed: {e}")
@@ -104,9 +136,10 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "  - stream: log stream name (e.g., k8s)\n"
             "  - start_time_us / end_time_us: microsecond timestamps (required; OpenObserve docs emphasize "
             "providing a time range to avoid scanning the entire dataset)\n"
-            "  - sql: optional full SQL; if omitted, it is composed from stream/where/order_by\n"
+            "  - sql: optional full SQL; if omitted, it is composed from stream/where/order_by. SQL is PostgreSQL-like.\n"
             "  - offset(size/from): pagination\n"
             "Returns fields: took/hits/total/from/size/scan_size (raw OpenObserve structure).\n"
+            "This tool also returns an additional page object with next_offset and has_more derived from OpenObserve total/from/size."
             "Safety/cost guardrails: caps size to OPENOBSERVE_MAX_PAGE_SIZE to avoid overly large responses.\n"
         ),
         annotations={
@@ -140,7 +173,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             Field(
                 description=(
                     "Optional WHERE clause (without the WHERE keyword), "
-                    "e.g., kubernetes.namespace_name='default'"
+                    "e.g., kubernetes.namespace_name='default' AND code=200"
                 )
             ),
         ] = None,
@@ -228,8 +261,29 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         try:
             backend = OpenObserveBackend(settings)
             data = await backend.search(body)
+
+            # --- Pagination hints (agent-friendly, non-breaking) ---
+            total = data.get("total")
+            resp_from = data.get("from", offset)
+            resp_size = data.get("size", size)
+
+            # next page heuristic: OpenObserve defines from/size as offset/limit
+            # (see docs: query.from, query.size; response total/from/size)
+            next_offset = resp_from + resp_size if isinstance(resp_from, int) and isinstance(resp_size, int) else offset + size
+            has_more = False
+            if isinstance(total, int) and isinstance(next_offset, int):
+                has_more = next_offset < total
+
+            page = {
+                "offset": resp_from,
+                "size": resp_size,
+                "total": total,
+                "next_offset": next_offset,
+                "has_more": has_more,
+            }
+
             log.info("success")
-            return {"data": data}
+            return {"data": data, "page": page}
         except Exception as e:
             log.error("failure", error=str(e))
             raise ToolError(f"openobserve_logs_query failed: {e}")
