@@ -133,10 +133,10 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "[OpenObserve] Query log data (Phase-1 supports logs only).\n"
             "Maps to the OpenObserve Search API: POST /api/{org}/_search.\n"
             "Key parameters:\n"
-            "  - stream: log stream name (e.g., k8s)\n"
+            "  - stream: log stream name (e.g., k8s) (should from openobserve_stream_list)\n"
             "  - start_time_us / end_time_us: microsecond timestamps (required; OpenObserve docs emphasize "
             "providing a time range to avoid scanning the entire dataset)\n"
-            "  - sql: optional full SQL; if omitted, it is composed from stream/where/order_by. SQL is PostgreSQL-like.\n"
+            "  - sql: optional full SQL; if omitted, it is composed from stream/where/order_by. SQL is PostgreSQL-like. Field should from openobserve_list_stream_schema.\n"
             "  - offset(size/from): pagination\n"
             "Returns fields: took/hits/total/from/size/scan_size (raw OpenObserve structure).\n"
             "This tool also returns an additional page object with next_offset and has_more derived from OpenObserve total/from/size."
@@ -172,7 +172,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             Optional[str],
             Field(
                 description=(
-                    "Optional WHERE clause (without the WHERE keyword), "
+                    "Optional WHERE clause (without the WHERE keyword), field should from openobserve_list_stream_schema, "
                     "e.g., kubernetes.namespace_name='default' AND code=200"
                 )
             ),
