@@ -22,11 +22,11 @@ class OpenObserveBackend:
     def _auth_header(self) -> Dict[str, str]:
         raw = f"{self.settings.username}:{self.settings.password.get_secret_value()}".encode("utf-8")
         token = base64.b64encode(raw).decode("ascii")
-        # OpenObserve uses HTTP Basic Authentication. [10](https://zhuanlan.zhihu.com/p/416317319)
+        # OpenObserve uses HTTP Basic Authentication.
         return {"Authorization": f"Basic {token}"}
 
     async def list_streams(self, stream_type: StreamType, fetch_schema: bool) -> Dict[str, Any]:
-        # GET /api/{organization}/streams?fetchSchema=false&type={StreamType} [1](https://engage.cloud.microsoft/main/threads/eyJfdHlwZSI6IlRocmVhZCIsImlkIjoiMjc1NjM3MTc1MDA1MTg0MCJ9)
+        # GET /api/{organization}/streams?fetchSchema=false&type={StreamType} [1](https://openobserve.ai/docs/api/stream/list/)
         url = self._url(f"/api/{self.settings.org}/streams")
         params = {
             "fetchSchema": "true" if fetch_schema else "false",
@@ -45,7 +45,7 @@ class OpenObserveBackend:
             return resp.json()
 
     async def search(self, body: Dict[str, Any]) -> Dict[str, Any]:
-        # POST /api/{organization}/_search [2](https://blog.gitcode.com/ded64dc4dd0015d52eca89837c77db98.html)
+        # POST /api/{organization}/_search [2](https://openobserve.ai/docs/api/search/search/)
         url = self._url(f"/api/{self.settings.org}/_search")
 
         async with httpx.AsyncClient(

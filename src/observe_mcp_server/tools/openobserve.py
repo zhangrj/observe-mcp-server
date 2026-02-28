@@ -63,10 +63,10 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         """
         OpenObserve Streams List.
 
-        - Endpoint: GET /api/{organization}/streams?fetchSchema=false&type={StreamType} [1](https://engage.cloud.microsoft/main/threads/eyJfdHlwZSI6IlRocmVhZCIsImlkIjoiMjc1NjM3MTc1MDA1MTg0MCJ9)
+        - Endpoint: GET /api/{organization}/streams?fetchSchema=false&type={StreamType}
         - Notes:
           - fetchSchema=true 时响应包含 schema（字段名/类型）。
-          - type 支持 logs/metrics/traces，默认 logs。[1](https://engage.cloud.microsoft/main/threads/eyJfdHlwZSI6IlRocmVhZCIsImlkIjoiMjc1NjM3MTc1MDA1MTg0MCJ9)
+          - type 支持 logs/metrics/traces，默认 logs。
         """
         req_id = str(uuid.uuid4())
         log = logger.bind(req_id=req_id, tool="openobserve_stream_list")
@@ -113,7 +113,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         """
         OpenObserve Search (logs query).
 
-        - Endpoint: POST /api/{organization}/_search [2](https://blog.gitcode.com/ded64dc4dd0015d52eca89837c77db98.html)
+        - Endpoint: POST /api/{organization}/_search
         - Request body:
           {
             "query": {
@@ -125,10 +125,10 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             },
             "search_type": "ui",
             "timeout": 0
-          } [2](https://blog.gitcode.com/ded64dc4dd0015d52eca89837c77db98.html)
+          } [2](https://openobserve.ai/docs/api/search/search/)
 
         Constraints:
-          - start_time/end_time 必须提供且为微秒；文档强调必须给时间范围。[2](https://blog.gitcode.com/ded64dc4dd0015d52eca89837c77db98.html)
+          - start_time/end_time 必须提供且为微秒；文档强调必须给时间范围。
         """
         req_id = str(uuid.uuid4())
         log = logger.bind(req_id=req_id, tool="openobserve_logs_query")
