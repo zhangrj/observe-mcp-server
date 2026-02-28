@@ -257,6 +257,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "search_type": search_type,
             "timeout": timeout,
         }
+        log.debug("request_body", body=body)
 
         try:
             backend = OpenObserveBackend(settings)
