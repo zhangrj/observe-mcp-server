@@ -14,49 +14,70 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("prometheus_list_metrics"),
         description=(
-            "【Prometheus】列出 Prometheus 中可用的所有指标名称（metrics）。\n"
-            "典型对应 Prometheus HTTP API：/api/v1/label/__name__/values。\n"
-            "常见用途：发现指标、自动补全、构建仪表盘。"
+            "[Prometheus] List all available metric names in Prometheus.\n"
+            "Typically maps to the Prometheus HTTP API: /api/v1/label/__name__/values.\n"
+            "Common use cases: metric discovery, auto-completion, and dashboard building."
         ),
+        annotations={
+            "title": "Prometheus: List Metrics",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"prometheus", "discovery"},
         meta={"backend": "prometheus", "phase": "2"},
     )
     async def prometheus_list_metrics(
-        match: Annotated[str | None, Field(description="可选过滤条件（例如按关键字/正则过滤，具体实现二期确定）")] = None,
-        limit: Annotated[int | None, Field(description="可选返回数量限制（实现二期确定）")] = None,
+        match: Annotated[str | None, Field(description="Optional filter (e.g., keyword/regex); Phase-2 implementation detail")] = None,
+        limit: Annotated[int | None, Field(description="Optional max number of results; Phase-2 implementation detail")] = None,
     ):
         raise ToolError("Prometheus tools are not implemented in Phase-1")
 
     @mcp.tool(
         name=tool_name("prometheus_execute_query"),
         description=(
-            "【Prometheus】执行 PromQL Instant Query（即时查询）。\n"
-            "典型对应 Prometheus HTTP API：/api/v1/query。\n"
-            "输入 query（PromQL），可选 time（RFC3339 或 unix timestamp）。"
+            "[Prometheus] Execute a PromQL instant query.\n"
+            "Typically maps to the Prometheus HTTP API: /api/v1/query.\n"
+            "Input query (PromQL) and optional time (RFC3339 or Unix timestamp)."
         ),
+        annotations={
+            "title": "Prometheus: Execute Instant Query",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"prometheus", "query"},
         meta={"backend": "prometheus", "phase": "2"},
     )
     async def prometheus_execute_query(
-        query: Annotated[str, Field(description="PromQL 表达式，例如 up{job='prometheus'}")],
-        time: Annotated[str | None, Field(description="可选：评估时间点（RFC3339 或 unix timestamp）")] = None,
+        query: Annotated[str, Field(description="PromQL expression, e.g. up{job='prometheus'}")],
+        time: Annotated[str | None, Field(description="Optional evaluation time (RFC3339 or Unix timestamp)")] = None,
     ):
         raise ToolError("Prometheus tools are not implemented in Phase-1")
 
     @mcp.tool(
         name=tool_name("prometheus_execute_range_query"),
         description=(
-            "【Prometheus】执行 PromQL Range Query（范围查询）。\n"
-            "典型对应 Prometheus HTTP API：/api/v1/query_range。\n"
-            "必填：start/end/step，用于返回时间序列（matrix）。"
+            "[Prometheus] Execute a PromQL range query.\n"
+            "Typically maps to the Prometheus HTTP API: /api/v1/query_range.\n"
+            "Required: start/end/step for returning a time series (matrix)."
         ),
+        annotations={
+            "title": "Prometheus: Execute Range Query",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"prometheus", "query"},
         meta={"backend": "prometheus", "phase": "2"},
     )
     async def prometheus_execute_range_query(
-        query: Annotated[str, Field(description="PromQL 表达式")],
-        start: Annotated[str, Field(description="开始时间（RFC3339 或 unix timestamp）")],
-        end: Annotated[str, Field(description="结束时间（RFC3339 或 unix timestamp）")],
-        step: Annotated[str, Field(description="步长/分辨率，例如 15s、1m、5m")],
+        query: Annotated[str, Field(description="PromQL expression")],
+        start: Annotated[str, Field(description="Start time (RFC3339 or Unix timestamp)")],
+        end: Annotated[str, Field(description="End time (RFC3339 or Unix timestamp)")],
+        step: Annotated[str, Field(description="Step/resolution, e.g. 15s, 1m, 5m")],
     ):
         raise ToolError("Prometheus tools are not implemented in Phase-1")

@@ -14,32 +14,46 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("skywalking_list_services"),
         description=(
-            "【SkyWalking】列出服务列表（services）。\n"
-            "SkyWalking Query Protocol(GraphQL) 中对应 listServices(layer)。\n"
-            "常见用途：服务发现、下钻实例/端点/拓扑分析前的入口。"
+            "[SkyWalking] List services.\n"
+            "In SkyWalking Query Protocol (GraphQL), this maps to listServices(layer).\n"
+            "Common use cases: service discovery and as an entry point before drilling into instances/endpoints/topology analysis."
         ),
+        annotations={
+            "title": "SkyWalking: List Services",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"skywalking", "discovery"},
         meta={"backend": "skywalking", "phase": "2"},
     )
     async def skywalking_list_services(
-        layer: Annotated[str | None, Field(description="可选：按 layer 过滤（GraphQL listServices(layer)）")] = None
+        layer: Annotated[str | None, Field(description="Optional: filter by layer (GraphQL listServices(layer))")] = None
     ):
         raise ToolError("SkyWalking tools are not implemented in Phase-1")
 
     @mcp.tool(
         name=tool_name("skywalking_list_instances"),
         description=(
-            "【SkyWalking】列出服务实例列表（instances）。\n"
-            "SkyWalking Query Protocol(GraphQL) 中对应 listInstances(duration, serviceId)。\n"
-            "需要 duration + serviceId（或 serviceName 条件，二期确定）。"
+            "[SkyWalking] List service instances.\n"
+            "In SkyWalking Query Protocol (GraphQL), this maps to listInstances(duration, serviceId).\n"
+            "Requires duration + serviceId (or serviceName filter; Phase-2 implementation detail)."
         ),
+        annotations={
+            "title": "SkyWalking: List Instances",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"skywalking", "discovery"},
         meta={"backend": "skywalking", "phase": "2"},
     )
     async def skywalking_list_instances(
-        service_id: Annotated[str, Field(description="服务 ID（SkyWalking 内部 ID）")],
-        duration_start: Annotated[str, Field(description="duration.start（如 '2021-07-03 1320' 形式，具体由后端协议决定）")],
+        service_id: Annotated[str, Field(description="Service ID (SkyWalking internal ID)")],
+        duration_start: Annotated[str, Field(description="duration.start (e.g., '2021-07-03 1320' format; exact format is determined by the backend protocol)")],
         duration_end: Annotated[str, Field(description="duration.end")],
-        step: Annotated[str, Field(description="duration.step（例如 MINUTE/HOUR 等）")],
+        step: Annotated[str, Field(description="duration.step (e.g., MINUTE/HOUR, etc.)")],
     ):
         raise ToolError("SkyWalking tools are not implemented in Phase-1")

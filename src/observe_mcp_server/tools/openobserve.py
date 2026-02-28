@@ -48,25 +48,38 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("openobserve_stream_list"),
         description=(
-            "【OpenObserve】列出 Streams（logs/metrics/traces）。\n"
-            "对应 OpenObserve Streams API：GET /api/{org}/streams?fetchSchema=false&type={StreamType}。\n"
-            "返回 OpenObserve 原始响应结构：{ list: [ {name, storage_type, stream_type, stats, (schema?), settings} ... ] }。\n"
-            "适用场景：在执行查询前发现可用 stream 名称，或检查 stream 统计信息/全文索引字段配置。\n"
+            "[OpenObserve] List Streams (logs/metrics/traces).\n"
+            "Maps to the OpenObserve Streams API: GET /api/{org}/streams?fetchSchema=false&type={StreamType}.\n"
+            "Returns the raw OpenObserve response structure: "
+            "{ list: [ {name, storage_type, stream_type, stats, (schema?), settings} ... ] }.\n"
+            "Use cases: discover available stream names before querying, or inspect stream stats / "
+            "full-text index field configuration.\n"
         ),
+        annotations={
+            "title": "OpenObserve: List Streams",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"openobserve", "streams", "discovery"},
         meta={"backend": "openobserve", "phase": "1"},
     )
     async def openobserve_stream_list(
-        stream_type: Annotated[StreamType, Field(description="Stream 类型：logs | metrics | traces")] = StreamType.logs,
-        fetch_schema: Annotated[bool, Field(description="是否返回每个 stream 的 schema 字段")] = False,
+        stream_type: Annotated[
+            StreamType, Field(description="Stream type: logs | metrics | traces")
+        ] = StreamType.logs,
+        fetch_schema: Annotated[
+            bool, Field(description="Whether to include the schema field for each stream")
+        ] = False,
     ) -> Dict[str, Any]:
         """
         OpenObserve Streams List.
 
         - Endpoint: GET /api/{organization}/streams?fetchSchema=false&type={StreamType}
         - Notes:
-          - fetchSchema=true 时响应包含 schema（字段名/类型）。
-          - type 支持 logs/metrics/traces，默认 logs。
+          - When fetchSchema=true, the response includes schema (field names/types).
+          - type supports logs/metrics/traces; default is logs.
         """
         req_id = str(uuid.uuid4())
         log = logger.bind(req_id=req_id, tool="openobserve_stream_list")
@@ -85,30 +98,75 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("openobserve_logs_query"),
         description=(
-            "【OpenObserve】查询日志数据（Phase-1 仅支持 logs 查询）。\n"
-            "对应 OpenObserve Search API：POST /api/{org}/_search。\n"
-            "核心参数：\n"
-            "  - stream：日志 stream 名称（如 k8s）\n"
-            "  - start_time_us / end_time_us：微秒时间戳（必填；OpenObserve 文档强调必须给时间范围以避免扫描全量数据）\n"
-            "  - sql：可直接传完整 SQL；若不传则由 stream/where/order_by 自动拼接\n"
-            "  - offset(size/from)：分页\n"
-            "返回字段：took/hits/total/from/size/scan_size（OpenObserve 原始结构）。\n"
-            "安全/成本保护：限制 size 最大值（OPENOBSERVE_MAX_PAGE_SIZE），避免一次返回过大。\n"
+            "[OpenObserve] Query log data (Phase-1 supports logs only).\n"
+            "Maps to the OpenObserve Search API: POST /api/{org}/_search.\n"
+            "Key parameters:\n"
+            "  - stream: log stream name (e.g., k8s)\n"
+            "  - start_time_us / end_time_us: microsecond timestamps (required; OpenObserve docs emphasize "
+            "providing a time range to avoid scanning the entire dataset)\n"
+            "  - sql: optional full SQL; if omitted, it is composed from stream/where/order_by\n"
+            "  - offset(size/from): pagination\n"
+            "Returns fields: took/hits/total/from/size/scan_size (raw OpenObserve structure).\n"
+            "Safety/cost guardrails: caps size to OPENOBSERVE_MAX_PAGE_SIZE to avoid overly large responses.\n"
         ),
+        annotations={
+            "title": "OpenObserve: Query Logs",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"openobserve", "logs", "query"},
         meta={"backend": "openobserve", "phase": "1"},
     )
     async def openobserve_logs_query(
-        stream: Annotated[str, Field(description="日志 stream 名称，例如 k8s（来自 openobserve_stream_list）")],
-        start_time_us: Annotated[int, Field(description="开始时间（微秒时间戳，必填）")],
-        end_time_us: Annotated[int, Field(description="结束时间（微秒时间戳，必填）")],
-        offset: Annotated[int, Field(description="分页 offset，对应 OpenObserve query.from")] = 0,
-        size: Annotated[int, Field(description="分页 limit，对应 OpenObserve query.size")] = 50,
-        where: Annotated[Optional[str], Field(description="可选 WHERE 子句（不含 WHERE 关键字），例如 kubernetes.namespace_name='default'")] = None,
-        order_by: Annotated[Optional[str], Field(description="可选 ORDER BY 子句（不含 ORDER BY 关键字），默认 _timestamp DESC")] = "_timestamp DESC",
-        sql: Annotated[Optional[str], Field(description="可选完整 SQL；提供时将覆盖 stream/where/order_by 自动拼接")] = None,
-        search_type: Annotated[str, Field(description="search_type：ui|dashboards|reports|alerts")] = "ui",
-        timeout: Annotated[int, Field(description="timeout：0 表示使用服务端默认")] = 0,
+        stream: Annotated[
+            str, Field(description="Log stream name, e.g., k8s (from openobserve_stream_list)")
+        ],
+        start_time_us: Annotated[
+            int, Field(description="Start time (microsecond timestamp, required)")
+        ],
+        end_time_us: Annotated[
+            int, Field(description="End time (microsecond timestamp, required)")
+        ],
+        offset: Annotated[
+            int, Field(description="Pagination offset; maps to OpenObserve query.from")
+        ] = 0,
+        size: Annotated[
+            int, Field(description="Pagination limit; maps to OpenObserve query.size")
+        ] = 50,
+        where: Annotated[
+            Optional[str],
+            Field(
+                description=(
+                    "Optional WHERE clause (without the WHERE keyword), "
+                    "e.g., kubernetes.namespace_name='default'"
+                )
+            ),
+        ] = None,
+        order_by: Annotated[
+            Optional[str],
+            Field(
+                description=(
+                    "Optional ORDER BY clause (without the ORDER BY keyword); default is _timestamp DESC"
+                )
+            ),
+        ] = "_timestamp DESC",
+        sql: Annotated[
+            Optional[str],
+            Field(
+                description=(
+                    "Optional full SQL; when provided, it overrides the auto-composed SQL from "
+                    "stream/where/order_by"
+                )
+            ),
+        ] = None,
+        search_type: Annotated[
+            str, Field(description="search_type: ui | dashboards | reports | alerts")
+        ] = "ui",
+        timeout: Annotated[
+            int, Field(description="timeout: 0 means use the server default")
+        ] = 0,
     ) -> Dict[str, Any]:
         """
         OpenObserve Search (logs query).
@@ -125,14 +183,21 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             },
             "search_type": "ui",
             "timeout": 0
-          } [2](https://openobserve.ai/docs/api/search/search/)
+          } https://openobserve.ai/docs/api/search/search/
 
         Constraints:
-          - start_time/end_time 必须提供且为微秒；文档强调必须给时间范围。
+          - start_time/end_time must be provided in microseconds; the docs emphasize providing a time range.
         """
         req_id = str(uuid.uuid4())
         log = logger.bind(req_id=req_id, tool="openobserve_logs_query")
-        log.info("request", stream=stream, start_time_us=start_time_us, end_time_us=end_time_us, offset=offset, size=size)
+        log.info(
+            "request",
+            stream=stream,
+            start_time_us=start_time_us,
+            end_time_us=end_time_us,
+            offset=offset,
+            size=size,
+        )
 
         settings = OpenObserveSettings() # type: ignore
 
@@ -168,23 +233,35 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         except Exception as e:
             log.error("failure", error=str(e))
             raise ToolError(f"openobserve_logs_query failed: {e}")
-        
+
     @mcp.tool(
         name=tool_name("openobserve_list_stream_schema"),
         description=(
-            "【OpenObserve】获取指定 stream 的 schema。\n"
-            "对应 OpenObserve API：GET /api/{org}/{stream}/schema。\n"
-            "核心参数：\n"
-            "  - stream：stream 名称（来自 openobserve_stream_list）\n"
-            "  - stream_type：stream 类型（logs/metrics/traces），默认 logs\n"
-            " 适用场景： 获取 stream 的字段名/类型信息，辅助构造查询条件（如 where/order_by 中的字段）。\n"
+            "[OpenObserve] Retrieve the schema for a specific stream.\n"
+            "Maps to the OpenObserve API: GET /api/{org}/{stream}/schema.\n"
+            "Key parameters:\n"
+            "  - stream: stream name (from openobserve_stream_list)\n"
+            "  - stream_type: stream type (logs/metrics/traces), default logs\n"
+            "Use cases: get field names/types to help build query conditions "
+            "(e.g., fields referenced in where/order_by).\n"
         ),
+        annotations={
+            "title": "OpenObserve: Get Stream Schema",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
         tags={"openobserve", "stream", "schema"},
         meta={"backend": "openobserve", "phase": "1"},
     )
     async def openobserve_list_stream_schema(
-        stream: Annotated[str, Field(description="stream 名称，例如 k8s（来自 openobserve_stream_list）")],
-        stream_type: Annotated[StreamType, Field(description="Stream 类型：logs | metrics | traces")] = StreamType.logs,
+        stream: Annotated[
+            str, Field(description="Stream name, e.g., k8s (from openobserve_stream_list)")
+        ],
+        stream_type: Annotated[
+            StreamType, Field(description="Stream type: logs | metrics | traces")
+        ] = StreamType.logs,
     ) -> Dict[str, Any]:
         """
         OpenObserve Get Stream Schema.
@@ -194,7 +271,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         req_id = str(uuid.uuid4())
         log = logger.bind(req_id=req_id, tool="openobserve_list_stream_schema")
         log.info("request", stream=stream)
-        
+
         try:
             settings = OpenObserveSettings() # type: ignore
             backend = OpenObserveBackend(settings)
@@ -204,4 +281,3 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         except Exception as e:
             log.error("failure", error=str(e))
             raise ToolError(f"openobserve_list_stream_schema failed: {e}")
-
