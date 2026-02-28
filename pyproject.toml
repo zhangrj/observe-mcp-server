@@ -24,3 +24,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.optional-dependencies]
+tests = [
+    "pytest>=7.0",
+]

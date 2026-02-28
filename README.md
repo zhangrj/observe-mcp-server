@@ -35,3 +35,16 @@ observe-mcp-server --transport streamable-http --host 0.0.0.0 --port 8000 --path
 ```bash
 observe-mcp-server --transport sse --host 0.0.0.0 --port 8000 --path /mcp
 ```
+
+## Testing
+
+Install test dependencies and run the test suite from the project root:
+
+```bash
+source .venv/bin/activate  # On Unix/macOS
+.venv\Scripts\activate     # On Windows
+uv pip install -e '.[tests]'
+pytest -q
+```
+
+Note: run commands from the project root so the `.env` file and `pyproject.toml` are discovered correctly.
