@@ -296,7 +296,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "Key parameters:\n"
             "  - stream: stream name (from openobserve_stream_list)\n"
             "  - stream_type: stream type (logs/metrics/traces), default logs\n"
-            "Use cases: get field names/types to help build query conditions "
+            "Use cases: get field names/types before build query conditions"
             "(e.g., fields referenced in where/order_by).\n"
         ),
         annotations={
