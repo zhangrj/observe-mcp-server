@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Dict, Optional
 
-from fastmcp import UserError
+from fastmcp.exceptions import ValidationError, ToolError
 from pydantic import Field
 from typing_extensions import Annotated
 
@@ -73,14 +73,14 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         log.info("request", stream_type=stream_type.value, fetch_schema=fetch_schema)
 
         try:
-            settings = OpenObserveSettings()
+            settings = OpenObserveSettings() # type: ignore
             backend = OpenObserveBackend(settings)
             data = await backend.list_streams(stream_type=stream_type, fetch_schema=fetch_schema)
             log.info("success")
             return {"data": data}
         except Exception as e:
             log.error("failure", error=str(e))
-            raise UserError(f"openobserve_stream_list failed: {e}")
+            raise ToolError(f"openobserve_stream_list failed: {e}")
 
     @mcp.tool(
         name=tool_name("openobserve_logs_query"),
@@ -134,17 +134,17 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         log = logger.bind(req_id=req_id, tool="openobserve_logs_query")
         log.info("request", stream=stream, start_time_us=start_time_us, end_time_us=end_time_us, offset=offset, size=size)
 
-        settings = OpenObserveSettings()
+        settings = OpenObserveSettings() # type: ignore
 
         # Guardrails
         if start_time_us <= 0 or end_time_us <= 0:
-            raise UserError("start_time_us/end_time_us must be provided in microseconds (us) and > 0")
+            raise ValidationError("start_time_us/end_time_us must be provided in microseconds (us) and > 0")
         if end_time_us < start_time_us:
-            raise UserError("end_time_us must be >= start_time_us")
+            raise ValidationError("end_time_us must be >= start_time_us")
         if size <= 0:
-            raise UserError("size must be > 0")
+            raise ValidationError("size must be > 0")
         if size > settings.max_page_size:
-            raise UserError(f"size too large: {size}, max_page_size={settings.max_page_size}")
+            raise ValidationError(f"size too large: {size}, max_page_size={settings.max_page_size}")
 
         final_sql = _build_sql(stream=stream, where=where, order_by=order_by, sql=sql)
 
@@ -167,4 +167,4 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             return {"data": data}
         except Exception as e:
             log.error("failure", error=str(e))
-            raise UserError(f"openobserve_logs_query failed: {e}")
+            raise ToolError(f"openobserve_logs_query failed: {e}")

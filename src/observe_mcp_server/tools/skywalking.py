@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastmcp import UserError
+from fastmcp.exceptions import ValidationError, ToolError
 from pydantic import Field
 from typing_extensions import Annotated
 
@@ -24,7 +24,7 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
     async def skywalking_list_services(
         layer: Annotated[str | None, Field(description="可选：按 layer 过滤（GraphQL listServices(layer)）")] = None
     ):
-        raise UserError("SkyWalking tools are not implemented in Phase-1")
+        raise ToolError("SkyWalking tools are not implemented in Phase-1")
 
     @mcp.tool(
         name=tool_name("skywalking_list_instances"),
@@ -42,4 +42,4 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         duration_end: Annotated[str, Field(description="duration.end")],
         step: Annotated[str, Field(description="duration.step（例如 MINUTE/HOUR 等）")],
     ):
-        raise UserError("SkyWalking tools are not implemented in Phase-1")
+        raise ToolError("SkyWalking tools are not implemented in Phase-1")

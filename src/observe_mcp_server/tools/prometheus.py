@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastmcp import UserError
+from fastmcp.exceptions import ValidationError, ToolError
 from pydantic import Field
 from typing_extensions import Annotated
 
@@ -25,7 +25,7 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
         match: Annotated[str | None, Field(description="可选过滤条件（例如按关键字/正则过滤，具体实现二期确定）")] = None,
         limit: Annotated[int | None, Field(description="可选返回数量限制（实现二期确定）")] = None,
     ):
-        raise UserError("Prometheus tools are not implemented in Phase-1")
+        raise ToolError("Prometheus tools are not implemented in Phase-1")
 
     @mcp.tool(
         name=tool_name("prometheus_execute_query"),
@@ -41,7 +41,7 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
         query: Annotated[str, Field(description="PromQL 表达式，例如 up{job='prometheus'}")],
         time: Annotated[str | None, Field(description="可选：评估时间点（RFC3339 或 unix timestamp）")] = None,
     ):
-        raise UserError("Prometheus tools are not implemented in Phase-1")
+        raise ToolError("Prometheus tools are not implemented in Phase-1")
 
     @mcp.tool(
         name=tool_name("prometheus_execute_range_query"),
@@ -59,4 +59,4 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
         end: Annotated[str, Field(description="结束时间（RFC3339 或 unix timestamp）")],
         step: Annotated[str, Field(description="步长/分辨率，例如 15s、1m、5m")],
     ):
-        raise UserError("Prometheus tools are not implemented in Phase-1")
+        raise ToolError("Prometheus tools are not implemented in Phase-1")
