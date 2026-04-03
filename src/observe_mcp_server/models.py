@@ -35,3 +35,25 @@ class OpenObserveSearchResponse(BaseModel):
     from_: int = Field(alias="from", description="Offset from request")
     size: int = Field(description="Limit from request")
     scan_size: int = Field(description="Scanned data size in MB")
+
+
+class PrometheusMetricCatalogItem(BaseModel):
+    name: str
+    type: Optional[str] = None
+    help: Optional[str] = None
+    label_keys: Optional[List[str]] = None
+    cardinality_estimate: Optional[int] = None
+    last_refresh: Optional[float] = None
+
+
+class PrometheusMetricSchema(BaseModel):
+    name: str
+    labels: List[str] = []
+    label_preview: Optional[Dict[str, List[str]]] = None
+    recommended_group_by: Optional[List[str]] = None
+    recommended_filters: Optional[List[str]] = None
+
+
+class PrometheusQueryResponse(BaseModel):
+    status: str
+    data: Dict[str, Any]

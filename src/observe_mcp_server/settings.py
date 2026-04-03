@@ -35,7 +35,7 @@ class ToolsetSettings(BaseSettings):
     )
 
     enable_openobserve: bool = True
-    enable_prometheus: bool = False
+    enable_prometheus: bool = True
     enable_skywalking: bool = False
 
     # Optional prefix applied to all tool names (e.g. "staging_")
@@ -80,6 +80,17 @@ class PrometheusSettings(BaseSettings):
     token: Optional[SecretStr] = None
     verify_ssl: bool = True
     timeout_seconds: float = 30.0
+    # Optional path to an alias mapping file (JSON). Example: config/prometheus_aliases.json
+    alias_path: str = ""
+
+    # Cache TTLs (seconds)
+    catalog_ttl_seconds: int = 600
+    schema_ttl_seconds: int = 600
+    label_preview_ttl_seconds: int = 180
+    alias_ttl_seconds: int = 1800
+
+    # Execution guardrails
+    max_series_limit: int = 2000
 
 
 class SkyWalkingSettings(BaseSettings):

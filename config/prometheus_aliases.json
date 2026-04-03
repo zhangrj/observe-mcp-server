@@ -1,0 +1,13 @@
+{
+  "error_rate": {
+    "description": "Common error rate patterns for HTTP errors",
+    "target_metrics": ["http_requests_total", "http_server_requests_total"],
+    "recommended_filters": ["status=~\"5..\""],
+    "recommended_query_patterns": ["sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"]
+  },
+  "qps": {
+    "description": "Queries per second (request rate)",
+    "target_metrics": ["http_requests_total", "requests_total"],
+    "recommended_query_patterns": ["sum(rate(http_requests_total[1m]))"]
+  }
+}
