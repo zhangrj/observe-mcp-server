@@ -179,11 +179,31 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         meta={"backend": "skywalking"},
     )
     async def query_traces(request: Annotated[Dict[str, Any], Field(description="Trace query request dict")]) -> Dict[str, Any]:
+        # Guardrails: require either a trace_id or both start and end times to avoid broad queries.
         try:
+            trace_id = request.get("trace_id") if isinstance(request, dict) else None
+            start = request.get("start") if isinstance(request, dict) else None
+            end = request.get("end") if isinstance(request, dict) else None
+
+            if not trace_id and not (start and end):
+                raise ValidationError("query_traces requires either 'trace_id' or both 'start' and 'end' to be specified")
+
+            # page_size caps to prevent large payloads
+            page_size = None
+            if isinstance(request, dict):
+                page_size = request.get("page_size")
+                if isinstance(page_size, int):
+                    if page_size <= 0:
+                        request["page_size"] = 20
+                    elif page_size > 100:
+                        request["page_size"] = 100
+
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
             data = await backend.query_traces(request)
             return {"data": data}
+        except ValidationError:
+            raise
         except Exception as e:
             logger.error("query_traces failed", error=str(e))
             raise ToolError(f"query_traces failed: {e}")
