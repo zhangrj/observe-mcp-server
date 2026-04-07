@@ -1,6 +1,6 @@
 {
   "dev_bms_log": {
-    "desc": "Manhattan project bms cluster dev business logs",
+    "desc": "Manhattan project bms cluster business logs",
     "keywords": ["manhattan", "bms-dev", "bms", "business logs"],
     "aliases": ["bms logs", "bms-dev logs"]
   },
@@ -10,7 +10,7 @@
     "aliases": ["dev logs", "rz-dev logs"]
   },
   "sit_bms_log": {
-    "desc": "Manhattan project bms cluster sit business logs",
+    "desc": "Manhattan project bms cluster business logs",
     "keywords": ["manhattan", "bms-sit", "business logs"],
     "aliases": ["bms-sit logs"]
   },
