@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 
@@ -73,4 +73,41 @@ class OpenObserveBackend:
             if resp.status_code >= 400:
                 text = (resp.text or "")[:1000]
                 raise RuntimeError(f"OpenObserve list_stream_schema failed: HTTP {resp.status_code}: {text}")
+            return resp.json()
+
+    async def field_values(
+        self,
+        stream: str,
+        fields: str,
+        start_time: int = 0,
+        end_time: int = 0,
+        size: int = 10,
+        keyword: Optional[str] = None,
+        no_count: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        GET /api/{organization}/{stream}/_values
+
+        Params: fields (comma separated), start_time (us), end_time (us), size, keyword, no_count
+        """
+        url = self._url(f"/api/{self.settings.org}/{stream}/_values")
+        params: Dict[str, Any] = {
+            "fields": fields,
+            "start_time": start_time,
+            "end_time": end_time,
+            "size": size,
+            "no_count": "true" if no_count else "false",
+        }
+        if keyword is not None:
+            params["keyword"] = keyword
+
+        async with httpx.AsyncClient(
+            timeout=self.settings.timeout_seconds,
+            verify=self.settings.verify_ssl,
+            headers={**self._auth_header(), "Accept": "application/json"},
+        ) as client:
+            resp = await client.get(url, params=params)
+            if resp.status_code >= 400:
+                text = (resp.text or "")[:1000]
+                raise RuntimeError(f"OpenObserve field_values failed: HTTP {resp.status_code}: {text}")
             return resp.json()

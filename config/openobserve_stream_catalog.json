@@ -1,0 +1,37 @@
+{
+  "dev_bms_log": {
+    "desc": "Manhattan project bms cluster dev business logs",
+    "keywords": ["manhattan", "bms-dev", "bms", "business logs"],
+    "aliases": ["bms logs", "bms-dev logs"]
+  },
+  "dev_log": {
+    "desc": "Manhattan project rz-dev cluster business logs",
+    "keywords": ["manhattan", "rz-dev", "dev", "business logs"],
+    "aliases": ["dev logs", "rz-dev logs"]
+  },
+  "sit_bms_log": {
+    "desc": "Manhattan project bms cluster sit business logs",
+    "keywords": ["manhattan", "bms-sit", "business logs"],
+    "aliases": ["bms-sit logs"]
+  },
+  "sit_log": {
+    "desc": "Manhattan project rz-sit cluster business logs",
+    "keywords": ["manhattan", "rz-sit", "sit", "business logs"],
+    "aliases": ["sit logs", "rz-sit logs"]
+  },
+  "bms_apisix_logs": {
+    "desc": "Manhattan project bms cluster apisix gateway logs",
+    "keywords": ["manhattan", "bms", "apisix logs"],
+    "aliases": ["bms apisix logs", "bms-dev apisix logs", "bms-sit apisix logs"]
+  },
+  "dev_apisix_logs": {
+    "desc": "Manhattan project rz-dev cluster apisix gateway logs",
+    "keywords": ["manhattan", "rz-dev", "dev", "apisix logs"],
+    "aliases": ["dev apisix logs", "rz-dev apisix logs"]
+  },
+  "sit_apisix_logs": {
+    "desc": "Manhattan project rz-sit cluster apisix gateway logs",
+    "keywords": ["manhattan", "rz-sit", "sit", "apisix logs"],
+    "aliases": ["sit apisix logs", "rz-sit apisix logs"]
+  }
+}

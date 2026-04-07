@@ -70,13 +70,9 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("openobserve_stream_list"),
         description=(
-            "[OpenObserve] List Streams (logs/metrics/traces).\n"
-            "Maps to the OpenObserve Streams API: GET /api/{org}/streams?fetchSchema=false&type={StreamType}.\n"
-            "Returns the raw OpenObserve response structure: "
-            "{ list: [ {name, storage_type, stream_type, stats, (schema?), settings} ... ] }.\n"
-            "This tool may also return a catalog mapping (if configured) to provide human-friendly meaning for stream names."
-            "Use cases: discover available stream names before querying, or inspect stream stats / "
-            "full-text index field configuration.\n"
+            "[OpenObserve] List available streams. Use this tool FIRST to choose a stream to query.\n"
+            "Returns stream metadata and, if configured, a catalog mapping to human-friendly names.\n"
+            "Tip for agents: call this tool before requesting schema or field values for a stream."
         ),
         annotations={
             "title": "OpenObserve: List Streams",
@@ -130,17 +126,9 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("openobserve_logs_query"),
         description=(
-            "[OpenObserve] Query log data (Phase-1 supports logs only).\n"
-            "Maps to the OpenObserve Search API: POST /api/{org}/_search.\n"
-            "Key parameters:\n"
-            "  - stream: log stream name (e.g., k8s) (should from openobserve_stream_list)\n"
-            "  - start_time_us / end_time_us: microsecond timestamps (required; OpenObserve docs emphasize "
-            "providing a time range to avoid scanning the entire dataset)\n"
-            "  - sql: optional full SQL; if omitted, it is composed from stream/where/order_by. SQL is PostgreSQL-like. Field should from openobserve_list_stream_schema.\n"
-            "  - offset(size/from): pagination\n"
-            "Returns fields: took/hits/total/from/size/scan_size (raw OpenObserve structure).\n"
-            "This tool also returns an additional page object with next_offset and has_more derived from OpenObserve total/from/size."
-            "Safety/cost guardrails: caps size to OPENOBSERVE_MAX_PAGE_SIZE to avoid overly large responses.\n"
+            "[OpenObserve] Execute a search on a selected stream. Run this LAST after: 1) selecting a stream with openobserve_stream_list, 2) inspecting schema with openobserve_list_stream_schema, and 3) optionally previewing values with openobserve_field_values.\n"
+            "Provide microsecond `start_time_us` and `end_time_us` to avoid full scans. Use `validate_only` to run lint checks prior to execution.\n"
+            "Returns the raw OpenObserve response plus an agent-friendly `page` object and execution hints when `validate_only` is used."
         ),
         annotations={
             "title": "OpenObserve: Query Logs",
@@ -200,6 +188,12 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         timeout: Annotated[
             int, Field(description="timeout: 0 means use the server default")
         ] = 0,
+        validate_only: Annotated[
+            bool, Field(description="If true, do not execute the query; only run lint checks and return suggestions")
+        ] = False,
+        sql_source: Annotated[
+            Optional[str], Field(description="Optional hint where SQL came from: ui|nl_to_sql|template")
+        ] = None,
     ) -> Dict[str, Any]:
         """
         OpenObserve Search (logs query).
@@ -245,6 +239,21 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             raise ValidationError(f"size too large: {size}, max_page_size={settings.max_page_size}")
 
         final_sql = _build_sql(stream=stream, where=where, order_by=order_by, sql=sql)
+
+        # If validate_only is requested, run the SQL linter and return lint result + execution hints
+        if validate_only:
+            try:
+                lint_result = await openobserve_sql_lint(stream=stream, sql=final_sql, start_time_us=start_time_us, end_time_us=end_time_us)
+            except Exception as e:
+                raise ToolError(f"openobserve_logs_query validate_only lint failed: {e}")
+
+            execution_hint = {
+                "safe_to_execute": lint_result.get("valid", False),
+                "suggested_sql": lint_result.get("suggested_sql"),
+                "messages": lint_result.get("messages", []),
+            }
+            return {"lint": lint_result, "execution_hint": execution_hint}
+
 
         body = {
             "query": {
@@ -292,13 +301,8 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("openobserve_list_stream_schema"),
         description=(
-            "[OpenObserve] Retrieve the schema for a specific stream.\n"
-            "Maps to the OpenObserve API: GET /api/{org}/{stream}/schema.\n"
-            "Key parameters:\n"
-            "  - stream: stream name (from openobserve_stream_list)\n"
-            "  - stream_type: stream type (logs/metrics/traces), default logs\n"
-            "Use cases: get field names/types before build query conditions"
-            "(e.g., fields referenced in where/order_by).\n"
+            "[OpenObserve] Retrieve the schema (field names and types) for a selected stream.\n"
+            "Use this immediately after choosing a stream to determine valid fields for WHERE/SELECT clauses and to guide value previews."
         ),
         annotations={
             "title": "OpenObserve: Get Stream Schema",
@@ -336,3 +340,176 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
         except Exception as e:
             log.error("failure", error=str(e))
             raise ToolError(f"openobserve_list_stream_schema failed: {e}")
+
+    @mcp.tool(
+        name=tool_name("openobserve_field_values"),
+        description=(
+            "[OpenObserve] Preview top values for one or more fields. Use this after inspecting the stream schema to obtain sample values helpful for building WHERE clauses.\n"
+            "Requires a microsecond time window (`start_time_us` and `end_time_us`). Keep `size` small for quick previews."
+        ),
+        annotations={
+            "title": "OpenObserve: Field Values",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
+        tags={"openobserve", "values", "discovery"},
+        meta={"backend": "openobserve", "phase": "2"},
+    )
+    async def openobserve_field_values(
+        stream: Annotated[str, Field(description="Stream name, e.g., k8s")],
+        fields: Annotated[str, Field(description="Comma-separated field names, e.g., service_name,status_code")],
+        start_time_us: Annotated[int, Field(description="Start time in microseconds (required)")],
+        end_time_us: Annotated[int, Field(description="End time in microseconds (required)")],
+        size: Annotated[int, Field(description="How many values to return per field (default 10)")]=10,
+        keyword: Annotated[Optional[str], Field(description="Optional substring to filter values")]=None,
+        no_count: Annotated[bool, Field(description="If true, do not return counts; default false")]=False,
+    ) -> Dict[str, Any]:
+        req_id = str(uuid.uuid4())
+        log = logger.bind(req_id=req_id, tool="openobserve_field_values")
+        log.info("request", stream=stream, fields=fields, start_time_us=start_time_us, end_time_us=end_time_us, size=size)
+
+        settings = OpenObserveSettings() # type: ignore
+
+        # Guardrails
+        if start_time_us <= 0 or end_time_us <= 0:
+            raise ValidationError("start_time_us/end_time_us must be provided in microseconds (us) and > 0")
+        if end_time_us < start_time_us:
+            raise ValidationError("end_time_us must be >= start_time_us")
+        if size <= 0:
+            raise ValidationError("size must be > 0")
+        if size > 100:
+            raise ValidationError("size too large: max 100")
+
+        try:
+            backend = OpenObserveBackend(settings)
+            data = await backend.field_values(
+                stream=stream,
+                fields=fields,
+                start_time=start_time_us,
+                end_time=end_time_us,
+                size=size,
+                keyword=keyword,
+                no_count=no_count,
+            )
+            log.info("success")
+            return {"data": data}
+        except Exception as e:
+            log.error("failure", error=str(e))
+            raise ToolError(f"openobserve_field_values failed: {e}")
+
+    @mcp.tool(
+        name=tool_name("openobserve_sql_lint"),
+        description=(
+            "[OpenObserve] Lint SQL for safety and performance using the stream schema. Run this before executing a query to check time range, avoid expensive patterns (e.g., SELECT *), and get suggested SQL.\n"
+            "Recommended usage: call after schema inspection and before `openobserve_logs_query` execution (or via `validate_only`)."
+        ),
+        annotations={
+            "title": "OpenObserve: SQL Lint",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": True,
+        },
+        tags={"openobserve", "lint", "safety"},
+        meta={"backend": "openobserve", "phase": "2"},
+    )
+    async def openobserve_sql_lint(
+        stream: Annotated[str, Field(description="Stream name, e.g., k8s")],
+        sql: Annotated[Optional[str], Field(description="SQL text to lint; if omitted, lint will evaluate a default SELECT * pattern")]=None,
+        start_time_us: Annotated[Optional[int], Field(description="Optional start time in microseconds for suggested fixes")]=None,
+        end_time_us: Annotated[Optional[int], Field(description="Optional end time in microseconds for suggested fixes")]=None,
+    ) -> Dict[str, Any]:
+        """
+        Basic schema-aware lint: enforces time-window, warns on SELECT *, and suggests explicit fields.
+        Returns: { valid: bool, messages: [...], suggested_sql: str, schema: {...} }
+        """
+        req_id = str(uuid.uuid4())
+        log = logger.bind(req_id=req_id, tool="openobserve_sql_lint")
+        log.info("request", stream=stream)
+
+        try:
+            settings = OpenObserveSettings() # type: ignore
+            backend = OpenObserveBackend(settings)
+
+            # fetch schema to make suggestions
+            try:
+                schema_resp = await backend.list_stream_schema(stream, StreamType.logs)
+            except Exception:
+                schema_resp = {}
+
+            messages: list[str] = []
+            valid = True
+            suggested_sql = sql or f"SELECT * FROM {stream}"
+
+            # check time window
+            if not start_time_us or not end_time_us:
+                messages.append("Missing time window: recommend providing start_time_us and end_time_us in microseconds to avoid full scans.")
+                valid = False
+            else:
+                if end_time_us < start_time_us:
+                    messages.append("Invalid time window: end_time_us < start_time_us")
+                    valid = False
+
+            # check SELECT * usage
+            if sql:
+                low = sql.lower()
+                if "select *" in low:
+                    # try to suggest explicit fields from schema
+                    fields_suggestion = None
+                    try:
+                        # schema_resp may contain various shapes; attempt to extract field names
+                        field_names: list[str] = []
+                        s = None
+                        if isinstance(schema_resp, dict):
+                            s = schema_resp.get("schema") or schema_resp.get("defined_schema_fields") or schema_resp
+                        if isinstance(s, dict) and "fields" in s and isinstance(s["fields"], list):
+                            for f in s["fields"]:
+                                if isinstance(f, dict):
+                                    name = f.get("name")
+                                    if name:
+                                        field_names.append(name)
+                                else:
+                                    field_names.append(str(f))
+                        elif isinstance(s, list):
+                            for f in s:
+                                if isinstance(f, dict):
+                                    name = f.get("name")
+                                    if name:
+                                        field_names.append(name)
+                                else:
+                                    field_names.append(str(f))
+                        # fallback to top-level keys if schema_resp is a mapping of fields
+                        if not field_names and isinstance(schema_resp, dict):
+                            for k in ["defined_schema_fields", "fields", "schema"]:
+                                v = schema_resp.get(k)
+                                if isinstance(v, list):
+                                    for item in v:
+                                        if isinstance(item, str):
+                                            field_names.append(item)
+                        if field_names:
+                            fields_suggestion = ",".join(field_names[:8])
+                    except Exception:
+                        fields_suggestion = None
+
+                    if fields_suggestion:
+                        suggested_sql = sql.replace("*", fields_suggestion, 1)
+                        messages.append("Avoid SELECT *: suggested explicit fields based on schema.")
+                    else:
+                        messages.append("Avoid SELECT *: consider selecting explicit fields to reduce scan size.")
+                    valid = False
+
+            # summary
+            result = {
+                "valid": valid,
+                "messages": messages,
+                "suggested_sql": suggested_sql,
+                "schema": schema_resp,
+            }
+
+            log.info("success", valid=valid, messages=messages)
+            return result
+        except Exception as e:
+            log.error("failure", error=str(e))
+            raise ToolError(f"openobserve_sql_lint failed: {e}")
