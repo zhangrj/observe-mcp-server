@@ -132,7 +132,7 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
                 if len(filtered) >= limit:
                     break
 
-            items = [PrometheusMetricCatalogItem(name=m).dict() for m in filtered]
+            items = [PrometheusMetricCatalogItem(name=m).model_dump() for m in filtered]
             req_log.info("success", count=len(items), cache_hit=cache_hit)
             return {"metrics": items, "cache_hit": cache_hit}
         except Exception as e:
@@ -182,7 +182,7 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
                 name=metric_name,
                 labels=sorted(label_keys),
                 label_preview=label_preview,
-            ).dict()
+            ).model_dump()
             cache.set(cache_key, schema)
             req_log.info("success", labels=len(label_keys))
             return {"schema": schema, "cache_hit": False}

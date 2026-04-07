@@ -21,7 +21,6 @@ def register_all_tools() -> None:
     if toolsets.enable_openobserve:
         register_openobserve_tools(mcp, logger, tool_prefix=prefix)
 
-    # Phase-1 default disabled; kept for future extension
     if toolsets.enable_prometheus:
         register_prometheus_tools(mcp, logger, tool_prefix=prefix)
 
