@@ -93,3 +93,17 @@ Prometheus 推荐工作流（示例）：
 5. 用 `execute_promql` 执行并读取结果。
 
 示例 alias 配置文件：`config/prometheus_aliases.json`（懒加载 + TTL）。
+
+## SkyWalking (GraphQL)
+
+本仓库提供对 SkyWalking OAP 的基础读取工具（GraphQL）。工具包括：
+
+- `list_layers` — 列出可用 layer（例如 HTTP、DB）
+- `list_services` — 列出服务，可按 layer 过滤
+- `list_instances` — 列出实例（service_id）
+- `list_endpoints` — 列出服务的 endpoints
+- `list_processes` — 列出服务进程
+- `query_traces` — 按条件查询 traces（建议先用 list_services 缩小范围）
+- `get_trace_detail` — 按 `trace_id` 查看单条 trace 的详细 spans
+
+配置示例请在 `.env` 中设置 `SKYWALKING_BASE_URL`（例如 `http://localhost:12800/graphql`）和可选的 `SKYWALKING_TOKEN`。
