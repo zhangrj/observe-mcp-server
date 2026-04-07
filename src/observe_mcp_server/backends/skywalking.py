@@ -45,10 +45,20 @@ class SkyWalkingBackend:
             return data.get("data", {})
 
     async def list_layers(self) -> Dict[str, Any]:
+        # Some SkyWalking versions return a list of strings for listLayers,
+        # while others return objects. Request the scalar and normalize.
         query = """
-        query ListLayers { listLayers { id name } }
+        query ListLayers { listLayers }
         """
-        return await self._post_graphql(query)
+        data = await self._post_graphql(query)
+        if not data:
+            return {"listLayers": []}
+        raw = data.get("listLayers")
+        if isinstance(raw, list) and raw and isinstance(raw[0], str):
+            # normalize to list of objects with id/name for downstream tools
+            normalized = [{"id": v, "name": v} for v in raw]
+            return {"listLayers": normalized}
+        return data
 
     async def list_services(self, layer: Optional[str] = None) -> Dict[str, Any]:
         query = """
