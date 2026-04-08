@@ -177,45 +177,78 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("query_traces"),
         description=(
-            "[SkyWalking] Query traces using SkyWalking GraphQL `queryTraces` protocol. Accepts a request dict matching common TraceQueryRequest fields.\n\n"
+            "[SkyWalking] Query traces using SkyWalking GraphQL `queryTraces` protocol. Use explicit parameters rather than a raw request dict.\n\n"
             "Recommended workflow:\n"
             "1. Narrow scope: call `list_layers` -> `list_services` -> (`list_instances` / `list_endpoints`) to obtain IDs.\n"
-            "2. Call `query_traces` with `service_id`/`instance_id`/`endpoint_id` and a time range (`start`/`end`) or `trace_id`.\n"
-            "3. Use `view` parameter to choose result format: `full` (raw), `summary` (aggregated insight), `errors_only` (error traces).\n\n"
+            "2. Call `query_traces` with explicit params (e.g. `service_id`, `start`, `end`, `step`) or `trace_id`.\n"
+            "3. Control pagination with `page_num`/`page_size`.\n\n"
             "Key notes and safeguards:\n"
-            "- SkyWalking requires either a time range or `trace_id`; prefer specifying `start`/`end` to avoid broad queries.\n"
-            "- Use `page_size` to limit returned traces (default limited to prevent large payloads).\n\n"
+            "- Provide either a `trace_id` or both `start` and `end` to avoid broad queries.\n"
+            "- `start`/`end`/`step` use the same Duration formats as other SkyWalking tools:\n"
+            "  - MONTH  -> yyyy-MM (e.g. 2017-11)\n"
+            "  - DAY    -> yyyy-MM-dd (e.g. 2017-11-08)\n"
+            "  - HOUR   -> yyyy-MM-dd HH (e.g. 2017-11-08 09)\n"
+            "  - MINUTE -> yyyy-MM-dd HHmm (e.g. 2017-11-08 0201)\n"
+            "  - SECOND -> yyyy-MM-dd HHmmss (e.g. 2017-11-08 093015)\n"
+            "- Use `page_size` to limit returned traces (default 20, max 100).\n\n"
             "Examples:\n"
-            "- {\"service_id\": \"S1\", \"start\": \"-1h\", \"view\": \"summary\"}\n"
+            "- {\"service_id\": \"S1\", \"queryDuration\": {\"step\": \"MINUTE\", \"start\": \"2026-04-08 0201\", \"end\": \"2026-04-08 0231\"}, \"pageNum\": 1, \"pageSize\": 20 }\n"
             "- {\"trace_id\": \"<trace-id>\"} — fetch a single trace by id"
         ),
         annotations={"title": "SkyWalking: Query Traces", "readOnlyHint": True},
         tags={"skywalking", "traces"},
         meta={"backend": "skywalking"},
     )
-    async def query_traces(request: Annotated[Dict[str, Any], Field(description="Trace query request dict")]) -> Dict[str, Any]:
-        # Guardrails: require either a trace_id or both start and end times to avoid broad queries.
+    async def query_traces(
+        service_id: Annotated[Optional[str], Field(description="Service ID (use 0 or omit for all services)")] = None,
+        service_instance_id: Annotated[Optional[str], Field(description="Service instance ID (optional)")] = None,
+        endpoint_id: Annotated[Optional[str], Field(description="Endpoint ID (optional)")] = None,
+        trace_id: Annotated[Optional[str], Field(description="Specific traceId to fetch (optional)")] = None,
+        start: Annotated[Optional[str], Field(description="Duration start string. Format depends on `step`: MONTH=yyyy-MM, DAY=yyyy-MM-dd, HOUR=yyyy-MM-dd HH, MINUTE=yyyy-MM-dd HHmm, SECOND=yyyy-MM-dd HHmmss (optional)")] = None,
+        end: Annotated[Optional[str], Field(description="Duration end string. Same format as `start` for the chosen `step` (optional)")] = None,
+        step: Annotated[Optional[str], Field(description="Duration step (MONTH|DAY|HOUR|MINUTE|SECOND) (optional)")] = None,
+        min_trace_duration: Annotated[Optional[int], Field(description="Minimum trace duration (ms) to filter, optional")] = None,
+        max_trace_duration: Annotated[Optional[int], Field(description="Maximum trace duration (ms) to filter, optional")] = None,
+        trace_state: Annotated[Optional[str], Field(description="TraceState: ALL, SUCCESS, or ERROR (optional)")] = "ALL",
+        query_order: Annotated[Optional[str], Field(description="QueryOrder: BY_START_TIME or BY_DURATION (optional)")] = "BY_START_TIME",
+        tags: Annotated[Optional[Any], Field(description="List of span tags to filter, e.g. [{\"key\": \"http.method\", \"value\": \"GET\"}] (optional)")] = None,
+        page_num: Annotated[Optional[int], Field(description="Pagination page number (default 1)")] = 1,
+        page_size: Annotated[Optional[int], Field(description="Pagination page size (default 20, max 100)")] = 20,
+        debug: Annotated[Optional[bool], Field(description="If true, enable OAP debug tracing for the query (optional)")] = False,
+    ) -> Dict[str, Any]:
+        # Build TraceQueryCondition from explicit parameters.
         try:
-            trace_id = request.get("trace_id") if isinstance(request, dict) else None
-            start = request.get("start") if isinstance(request, dict) else None
-            end = request.get("end") if isinstance(request, dict) else None
+            condition: Dict[str, Any] = {}
+            if service_id is not None:
+                condition["serviceId"] = service_id
+            if service_instance_id is not None:
+                condition["serviceInstanceId"] = service_instance_id
+            if endpoint_id is not None:
+                condition["endpointId"] = endpoint_id
+            if trace_id is not None:
+                condition["traceId"] = trace_id
+            # Include queryDuration even if step is not provided (some backends accept relative formats)
+            if start is not None and end is not None:
+                condition["queryDuration"] = {"start": start, "end": end, "step": step}
+            if min_trace_duration is not None:
+                condition["minTraceDuration"] = min_trace_duration
+            if max_trace_duration is not None:
+                condition["maxTraceDuration"] = max_trace_duration
+            condition["traceState"] = trace_state or "ALL"
+            condition["queryOrder"] = query_order or "BY_START_TIME"
+            if tags is not None:
+                condition["tags"] = tags
+            condition["paging"] = {"pageNum": page_num or 1, "pageSize": min(max(1, page_size or 20), 100)}
 
-            if not trace_id and not (start and end):
-                raise ValidationError("query_traces requires either 'trace_id' or both 'start' and 'end' to be specified")
-
-            # page_size caps to prevent large payloads
-            page_size = None
-            if isinstance(request, dict):
-                page_size = request.get("page_size")
-                if isinstance(page_size, int):
-                    if page_size <= 0:
-                        request["page_size"] = 20
-                    elif page_size > 100:
-                        request["page_size"] = 100
+            # Guardrails: require either a trace_id or both start and end times to avoid broad queries.
+            trace_id_present = condition.get("traceId")
+            qd = condition.get("queryDuration")
+            if not trace_id_present and not (qd and qd.get("start") and qd.get("end")):
+                raise ValidationError("query_traces requires either 'traceId' or both 'start' and 'end' to be specified")
 
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
-            data = await backend.query_traces(request)
+            data = await backend.query_traces(condition)
             return {"data": data}
         except ValidationError:
             raise
@@ -242,12 +275,14 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         start: Annotated[str, Field(description="Duration start string. Format depends on `step`: MONTH=yyyy-MM, DAY=yyyy-MM-dd, HOUR=yyyy-MM-dd HH, MINUTE=yyyy-MM-dd HHmm, SECOND=yyyy-MM-dd HHmmss")],
         end: Annotated[str, Field(description="Duration end string. Same format as `start` for the chosen `step`")],
         step: Annotated[str, Field(description="Duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")],
+        debug: Annotated[Optional[bool], Field(description="If true, enable OAP debug tracing for this trace detail query (optional)")] = False,
     ) -> Dict[str, Any]:
         if not trace_id:
             raise ValidationError("trace_id is required")
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
+            # Assemble variables; backend expects duration dict
             data = await backend.get_trace_detail(trace_id=trace_id, start=start, end=end, step=step)
             return {"data": data}
         except Exception as e:
