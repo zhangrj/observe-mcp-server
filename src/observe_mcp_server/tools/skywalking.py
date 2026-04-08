@@ -58,7 +58,7 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         tags={"skywalking", "metadata"},
         meta={"backend": "skywalking"},
     )
-    async def list_services(layer: Annotated[Optional[str], Field(description="Layer name, optional")]=None) -> Dict[str, Any]:
+    async def list_services(layer: Annotated[str, Field(description="Layer name (required)")] = "GENERAL") -> Dict[str, Any]:
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)

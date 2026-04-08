@@ -61,10 +61,13 @@ class SkyWalkingBackend:
         return data
 
     async def list_services(self, layer: Optional[str] = None) -> Dict[str, Any]:
+        # SkyWalking's listServices often requires a non-null layer argument (String!).
+        if not layer:
+            raise RuntimeError("SkyWalking list_services requires a 'layer' argument")
         query = """
-        query ListServices($layer: String) { listServices(layer: $layer) { id name } }
+        query ListServices($layer: String!) { listServices(layer: $layer) { id name } }
         """
-        vars = {"layer": layer} if layer else None
+        vars = {"layer": layer}
         return await self._post_graphql(query, variables=vars)
 
     async def list_instances(self, service_id: str, keyword: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
@@ -89,14 +92,14 @@ class SkyWalkingBackend:
         return await self._post_graphql(query, variables=vars)
 
     async def query_traces(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Send a trace query request (shape follows SkyWalking GraphQL API).
+        """Send a trace query request using SkyWalking's TraceQueryCondition GraphQL input type.
 
-        The `request` is passed as GraphQL variables. This wrapper accepts a dict and forwards it.
+        The `request` dict will be forwarded as the GraphQL variable named `condition`.
         """
         query = """
-        query QueryTraces($req: TracesQueryRequest) { queryTraces(condition: $req) { total results { traceId spans } } }
+        query QueryTraces($condition: TraceQueryCondition) { queryTraces(condition: $condition) { total results { traceId spans } } }
         """
-        vars = {"req": request}
+        vars = {"condition": request}
         return await self._post_graphql(query, variables=vars)
 
     async def get_trace_detail(self, trace_id: str) -> Dict[str, Any]:
