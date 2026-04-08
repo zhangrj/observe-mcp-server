@@ -76,22 +76,29 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
             "A service instance represents a running process (e.g., a pod or JVM).\n\n"
             "Workflow:\n"
             "1. Use `list_services` to obtain a `service_id`.\n"
-            "2. Call `list_instances` with that `service_id` and optional `start`/`end` duration to narrow results.\n\n"
+            "2. Call `list_instances` with that `service_id` and a duration defined by `start`, `end`, `step`.\n\n"
+            "Duration:\n"
+            "- `step` selects time precision and the required format for `start`/`end`:\n"
+            "  - MONTH  -> yyyy-MM (e.g. 2017-11)\n"
+            "  - DAY    -> yyyy-MM-dd (e.g. 2017-11-08)\n"
+            "  - HOUR   -> yyyy-MM-dd HH (e.g. 2017-11-08 09)\n"
+            "  - MINUTE -> yyyy-MM-dd HHmm (e.g. 2017-11-08 0930)\n"
+            "  - SECOND -> yyyy-MM-dd HHmmss (e.g. 2017-11-08 093015)\n"
+            "- `start` and `end` must match the chosen `step` format exactly.\n\n"
             "Parameters:\n"
             "- `service_id` (required): SkyWalking service ID.\n"
-            "- `keyword` (optional): text filter on instance name.\n"
-            "- `limit` (optional): max results (default 100).\n\n"
+            "- `start`,`end`,`step` (required): duration fields as described above.\n\n"
             "Example:\n"
-            "- {\"service_id\": \"S1\", \"start\": \"-1h\"}"
+            "- {\"service_id\": \"S1\", \"step\": \"HOUR\", \"start\": \"2017-11-08 09\", \"end\": \"2017-11-08 19\"}"
         ),
         annotations={"title": "SkyWalking: List Instances", "readOnlyHint": True},
         tags={"skywalking", "metadata"},
         meta={"backend": "skywalking"},
     )
     async def list_instances(
-        start: Annotated[str, Field(description="Duration start string (matches Step format)")],
-        end: Annotated[str, Field(description="Duration end string (matches Step format)")],
-        step: Annotated[str, Field(description="Duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")],
+        start: Annotated[str, Field(description="Duration start string. Format depends on `step`: MONTH=yyyy-MM, DAY=yyyy-MM-dd, HOUR=yyyy-MM-dd HH, MINUTE=yyyy-MM-dd HHmm, SECOND=yyyy-MM-dd HHmmss")],
+        end: Annotated[str, Field(description="Duration end string. Same format as `start` for the chosen `step`")],
+        step: Annotated[str, Field(description="Duration step: one of MONTH, DAY, HOUR, MINUTE, SECOND. Controls start/end format and aggregation granularity")],
         service_id: Annotated[str, Field(description="Service ID")],
     ) -> Dict[str, Any]:
         try:
@@ -110,10 +117,11 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
             "Endpoints are useful to narrow trace queries to a specific operation.\n\n"
             "Workflow:\n"
             "1. Use `list_services` to get a `service_id`.\n"
-            "2. Call `list_endpoints` with `service_id` (optionally `keyword`) to find endpoint ids.\n\n"
+            "2. Call `list_endpoints` with `service_id` and optional duration (`start`,`end`,`step`) to scope results.\n\n"
+            "Duration: same `step`/format rules as `list_instances` (see list_instances).\n\n"
             "Parameters & examples:\n"
             "- {\"service_id\": \"S1\"} — list endpoints for service S1\n"
-            "- {\"service_id\": \"S1\", \"keyword\": \"/api/users\"} — search by path substring"
+            "- {\"service_id\": \"S1\", \"keyword\": \"/api/users\", \"step\": \"DAY\", \"start\": \"2023-01-01\", \"end\": \"2023-01-07\"}"
         ),
         annotations={"title": "SkyWalking: List Endpoints", "readOnlyHint": True},
         tags={"skywalking", "metadata"},
@@ -123,8 +131,8 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         service_id: Annotated[str, Field(description="Service ID")],
         keyword: Annotated[Optional[str], Field(description="Optional search keyword")] = None,
         limit: Annotated[int, Field(description="Max results (default 100)")] = 100,
-        start: Annotated[Optional[str], Field(description="Optional duration start string")] = None,
-        end: Annotated[Optional[str], Field(description="Optional duration end string")] = None,
+        start: Annotated[Optional[str], Field(description="Optional duration start string. Format depends on `step` (see list_instances)")] = None,
+        end: Annotated[Optional[str], Field(description="Optional duration end string. Format depends on `step` (see list_instances)")] = None,
         step: Annotated[Optional[str], Field(description="Optional duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")] = None,
     ) -> Dict[str, Any]:
         try:
@@ -143,7 +151,8 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
             "Workflow:\n"
             "1. Find `service_id` via `list_services`.\n"
             "2. Optionally call `list_instances` to find an `instance_id`.\n"
-            "3. Call `list_processes` with `service_id` (and optional time range) to retrieve process metadata.\n\n"
+            "3. Call `list_processes` with `instance_id` and required duration (`start`,`end`,`step`) to retrieve process metadata.\n\n"
+            "Duration: same `step`/format rules as `list_instances` (see list_instances).\n\n"
             "Notes: results include process id, agentId, labels and attributes useful for debugging."
         ),
         annotations={"title": "SkyWalking: List Processes", "readOnlyHint": True},
@@ -151,9 +160,9 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         meta={"backend": "skywalking"},
     )
     async def list_processes(
-        start: Annotated[str, Field(description="Duration start string (matches Step format)")],
-        end: Annotated[str, Field(description="Duration end string (matches Step format)")],
-        step: Annotated[str, Field(description="Duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")],
+        start: Annotated[str, Field(description="Duration start string. Format depends on `step`: MONTH=yyyy-MM, DAY=yyyy-MM-dd, HOUR=yyyy-MM-dd HH, MINUTE=yyyy-MM-dd HHmm, SECOND=yyyy-MM-dd HHmmss")],
+        end: Annotated[str, Field(description="Duration end string. Same format as `start` for the chosen `step`")],
+        step: Annotated[str, Field(description="Duration step: one of MONTH, DAY, HOUR, MINUTE, SECOND. Controls start/end format and aggregation granularity")],
         instance_id: Annotated[str, Field(description="Instance ID")],
     ) -> Dict[str, Any]:
         try:
@@ -220,8 +229,9 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
             "[SkyWalking] Retrieve full trace details for a given `trace_id`.\n\n"
             "Usage:\n"
             "1. Call `query_traces` to find candidate trace IDs.\n"
-            "2. Call `get_trace_detail` with `trace_id` to obtain spans, logs, tags and attached events for deep debugging.\n\n"
-            "Example: {\"trace_id\": \"t1\"}"
+            "2. Call `get_trace_detail` with `trace_id` (and optional `start`,`end`,`step`) to limit the time window for related data.\n\n"
+            "Duration: if provided, `start`/`end` must match `step` format (see list_instances).\n\n"
+            "Example: {\"trace_id\": \"t1\", \"step\": \"MINUTE\", \"start\": \"2023-01-01 1200\", \"end\": \"2023-01-01 1230\"}"
         ),
         annotations={"title": "SkyWalking: Trace Detail", "readOnlyHint": True},
         tags={"skywalking", "traces"},
