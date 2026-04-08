@@ -65,7 +65,7 @@ class SkyWalkingBackend:
         if not layer:
             raise RuntimeError("SkyWalking list_services requires a 'layer' argument")
         query = """
-        query ListServices($layer: String) { listServices(layer: $layer) { id name } }
+        query ListServices($layer: String!) { listServices(layer: $layer) { id name } }
         """
         vars = {"layer": layer} if layer is not None else None
         return await self._post_graphql(query, variables=vars)
