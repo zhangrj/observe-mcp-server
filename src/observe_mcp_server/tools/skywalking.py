@@ -129,11 +129,11 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
     )
     async def list_endpoints(
         service_id: Annotated[str, Field(description="Service ID")],
+        start: Annotated[str, Field(description="Duration start string. Format depends on `step`: MONTH=yyyy-MM, DAY=yyyy-MM-dd, HOUR=yyyy-MM-dd HH, MINUTE=yyyy-MM-dd HHmm, SECOND=yyyy-MM-dd HHmmss")],
+        end: Annotated[str, Field(description="Duration end string. Same format as `start` for the chosen `step`")],
+        step: Annotated[str, Field(description="Duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")],
         keyword: Annotated[Optional[str], Field(description="Optional search keyword")] = None,
         limit: Annotated[int, Field(description="Max results (default 100)")] = 100,
-        start: Annotated[Optional[str], Field(description="Optional duration start string. Format depends on `step` (see list_instances)")] = None,
-        end: Annotated[Optional[str], Field(description="Optional duration end string. Format depends on `step` (see list_instances)")] = None,
-        step: Annotated[Optional[str], Field(description="Optional duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")] = None,
     ) -> Dict[str, Any]:
         try:
             settings = SkyWalkingSettings()  # type: ignore
@@ -239,19 +239,16 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
     )
     async def get_trace_detail(
         trace_id: Annotated[str, Field(description="Trace ID")],
-        start: Annotated[Optional[str], Field(description="Optional duration start string")] = None,
-        end: Annotated[Optional[str], Field(description="Optional duration end string")] = None,
-        step: Annotated[Optional[str], Field(description="Optional duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")] = None,
+        start: Annotated[str, Field(description="Duration start string. Format depends on `step`: MONTH=yyyy-MM, DAY=yyyy-MM-dd, HOUR=yyyy-MM-dd HH, MINUTE=yyyy-MM-dd HHmm, SECOND=yyyy-MM-dd HHmmss")],
+        end: Annotated[str, Field(description="Duration end string. Same format as `start` for the chosen `step`")],
+        step: Annotated[str, Field(description="Duration step (MONTH|DAY|HOUR|MINUTE|SECOND)")],
     ) -> Dict[str, Any]:
         if not trace_id:
             raise ValidationError("trace_id is required")
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
-            if start is None and end is None and step is None:
-                data = await backend.get_trace_detail(trace_id=trace_id)
-            else:
-                data = await backend.get_trace_detail(trace_id=trace_id, start=start, end=end, step=step)
+            data = await backend.get_trace_detail(trace_id=trace_id, start=start, end=end, step=step)
             return {"data": data}
         except Exception as e:
             logger.error("get_trace_detail failed", error=str(e))

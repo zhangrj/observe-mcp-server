@@ -16,7 +16,7 @@ class FakeBackend:
     async def query_traces(self, request):
         return {"queryTraces": {"total": 1, "results": [{"traceId": "t1", "spans": []}]}}
 
-    async def get_trace_detail(self, trace_id: str):
+    async def get_trace_detail(self, trace_id: str, start: str, end: str, step: str):
         return {"trace": {"traceId": trace_id, "spans": []}}
 
 
@@ -69,5 +69,6 @@ def test_list_layers_and_query_traces(monkeypatch):
 
     detail_func = dmcp.tools.get("get_trace_detail")
     assert detail_func is not None
-    dres = asyncio.run(detail_func("t1"))
+    # provide required duration params: step=HOUR and matching start/end formats
+    dres = asyncio.run(detail_func("t1", "2017-11-08 09", "2017-11-08 19", "HOUR"))
     assert dres["data"]["trace"]["traceId"] == "t1"

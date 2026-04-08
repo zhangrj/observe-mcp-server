@@ -82,13 +82,34 @@ class SkyWalkingBackend:
     async def list_endpoints(self, service_id: str, keyword: Optional[str] = None, limit: int = 100,
                              start: Optional[str] = None, end: Optional[str] = None, step: Optional[str] = None) -> Dict[str, Any]:
         # V2: findEndpoint(keyword: String, serviceId: ID!, limit: Int!, duration: Duration): [Endpoint!]!
-        query = """
-        query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!, $duration: Duration) { findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit, duration: $duration) { id name } }
-        """
-        vars: Dict[str, Any] = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+        # Some SkyWalking versions do not accept a `duration` argument on findEndpoint.
+        # Use the duration argument only when all three fields are provided; otherwise omit it.
+        # If duration provided, try calling findEndpoint with duration. Some OAP versions
+        # reject a `duration` argument — in that case retry without duration.
         if start is not None and end is not None and step is not None:
-            vars["duration"] = {"start": start, "end": end, "step": step}
-        return await self._post_graphql(query, variables=vars)
+            query_with_duration = """
+            query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!, $duration: Duration) { findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit, duration: $duration) { id name } }
+            """
+            duration = {"start": start, "end": end, "step": step}
+            vars_with_duration: Dict[str, Any] = {"serviceId": service_id, "keyword": keyword, "limit": limit, "duration": duration}
+            try:
+                return await self._post_graphql(query_with_duration, variables=vars_with_duration)
+            except RuntimeError as e:
+                msg = str(e)
+                if "Unknown field argument duration" in msg or "UnknownArgument" in msg or "duration" in msg and "Unknown" in msg:
+                    # Retry without duration for older SkyWalking versions
+                    query = """
+                    query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!) { findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit) { id name } }
+                    """
+                    vars: Dict[str, Any] = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+                    return await self._post_graphql(query, variables=vars)
+                raise
+        else:
+            query = """
+            query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!) { findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit) { id name } }
+            """
+            vars: Dict[str, Any] = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+            return await self._post_graphql(query, variables=vars)
 
     async def list_processes(self, start: str, end: str, step: str, instance_id: str) -> Dict[str, Any]:
         # V2: listProcesses(duration: Duration!, instanceId: ID!): [Process!]!
@@ -110,12 +131,11 @@ class SkyWalkingBackend:
         vars = {"condition": request}
         return await self._post_graphql(query, variables=vars)
 
-    async def get_trace_detail(self, trace_id: str, start: Optional[str] = None, end: Optional[str] = None, step: Optional[str] = None) -> Dict[str, Any]:
+    async def get_trace_detail(self, trace_id: str, start: str, end: str, step: str) -> Dict[str, Any]:
         # V2: queryTrace(traceId: ID!, duration: Duration, debug: Boolean): Trace
+        # start,end,step are required to scope the trace detail query.
         query = """
         query GetTrace($traceId: ID!, $duration: Duration) { queryTrace(traceId: $traceId, duration: $duration) { traceId spans } }
         """
-        vars: Dict[str, Any] = {"traceId": trace_id}
-        if start is not None and end is not None and step is not None:
-            vars["duration"] = {"start": start, "end": end, "step": step}
+        vars: Dict[str, Any] = {"traceId": trace_id, "duration": {"start": start, "end": end, "step": step}}
         return await self._post_graphql(query, variables=vars)
