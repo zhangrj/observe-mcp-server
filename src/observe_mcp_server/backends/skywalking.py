@@ -65,30 +65,35 @@ class SkyWalkingBackend:
         if not layer:
             raise RuntimeError("SkyWalking list_services requires a 'layer' argument")
         query = """
-        query ListServices($layer: String!) { listServices(layer: $layer) { id name } }
+        query ListServices($layer: String) { listServices(layer: $layer) { id name } }
         """
-        vars = {"layer": layer}
+        vars = {"layer": layer} if layer is not None else None
         return await self._post_graphql(query, variables=vars)
 
-    async def list_instances(self, service_id: str, keyword: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    async def list_instances(self, duration: Dict[str, Any], service_id: str) -> Dict[str, Any]:
+        # V2: listInstances(duration: Duration!, serviceId: ID!): [ServiceInstance!]!
         query = """
-        query ListInstances($serviceId: ID!, $keyword: String, $limit: Int) { listInstances(serviceId: $serviceId, keyword: $keyword, limit: $limit) { id name } }
+        query ListInstances($duration: Duration!, $serviceId: ID!) { listInstances(duration: $duration, serviceId: $serviceId) { id name } }
         """
-        vars = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+        vars = {"duration": duration, "serviceId": service_id}
         return await self._post_graphql(query, variables=vars)
 
-    async def list_endpoints(self, service_id: str, keyword: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    async def list_endpoints(self, service_id: str, keyword: Optional[str] = None, limit: int = 100, duration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # V2: findEndpoint(keyword: String, serviceId: ID!, limit: Int!, duration: Duration): [Endpoint!]!
         query = """
-        query ListEndpoints($serviceId: ID!, $keyword: String, $limit: Int) { searchEndpoints(serviceId: $serviceId, keyword: $keyword, limit: $limit) { id name } }
+        query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!, $duration: Duration) { findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit, duration: $duration) { id name } }
         """
-        vars = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+        vars: Dict[str, Any] = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+        if duration is not None:
+            vars["duration"] = duration
         return await self._post_graphql(query, variables=vars)
 
-    async def list_processes(self, service_id: str, keyword: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    async def list_processes(self, duration: Dict[str, Any], instance_id: str) -> Dict[str, Any]:
+        # V2: listProcesses(duration: Duration!, instanceId: ID!): [Process!]!
         query = """
-        query ListProcesses($serviceId: ID!, $keyword: String, $limit: Int) { searchProcesses(serviceId: $serviceId, keyword: $keyword, limit: $limit) { id name } }
+        query ListProcesses($duration: Duration!, $instanceId: ID!) { listProcesses(duration: $duration, instanceId: $instanceId) { id name } }
         """
-        vars = {"serviceId": service_id, "keyword": keyword, "limit": limit}
+        vars = {"duration": duration, "instanceId": instance_id}
         return await self._post_graphql(query, variables=vars)
 
     async def query_traces(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,9 +107,12 @@ class SkyWalkingBackend:
         vars = {"condition": request}
         return await self._post_graphql(query, variables=vars)
 
-    async def get_trace_detail(self, trace_id: str) -> Dict[str, Any]:
+    async def get_trace_detail(self, trace_id: str, duration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # V2: queryTrace(traceId: ID!, duration: Duration, debug: Boolean): Trace
         query = """
-        query GetTrace($traceId: ID!) { trace(traceId: $traceId) { traceId spans } }
+        query GetTrace($traceId: ID!, $duration: Duration) { queryTrace(traceId: $traceId, duration: $duration) { traceId spans } }
         """
-        vars = {"traceId": trace_id}
+        vars: Dict[str, Any] = {"traceId": trace_id}
+        if duration is not None:
+            vars["duration"] = duration
         return await self._post_graphql(query, variables=vars)

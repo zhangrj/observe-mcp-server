@@ -62,7 +62,8 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
-            data = await backend.list_services(layer=layer)
+            # layer is optional in v2; pass only if provided
+            data = await backend.list_services(layer=layer if layer else None)
             return {"data": data}
         except Exception as e:
             logger.error("list_services failed", error=str(e))
@@ -88,14 +89,13 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         meta={"backend": "skywalking"},
     )
     async def list_instances(
+        duration: Annotated[Dict[str, Any], Field(description="Duration dict with start/end")],
         service_id: Annotated[str, Field(description="Service ID")],
-        keyword: Annotated[Optional[str], Field(description="Optional search keyword")] = None,
-        limit: Annotated[int, Field(description="Max results (default 100)")] = 100,
     ) -> Dict[str, Any]:
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
-            data = await backend.list_instances(service_id=service_id, keyword=keyword, limit=limit)
+            data = await backend.list_instances(duration=duration, service_id=service_id)
             return {"data": data}
         except Exception as e:
             logger.error("list_instances failed", error=str(e))
@@ -121,11 +121,12 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         service_id: Annotated[str, Field(description="Service ID")],
         keyword: Annotated[Optional[str], Field(description="Optional search keyword")] = None,
         limit: Annotated[int, Field(description="Max results (default 100)")] = 100,
+        duration: Annotated[Optional[Dict[str, Any]], Field(description="Optional duration dict")] = None,
     ) -> Dict[str, Any]:
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
-            data = await backend.list_endpoints(service_id=service_id, keyword=keyword, limit=limit)
+            data = await backend.list_endpoints(service_id=service_id, keyword=keyword, limit=limit, duration=duration)
             return {"data": data}
         except Exception as e:
             logger.error("list_endpoints failed", error=str(e))
@@ -146,14 +147,13 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         meta={"backend": "skywalking"},
     )
     async def list_processes(
-        service_id: Annotated[str, Field(description="Service ID")],
-        keyword: Annotated[Optional[str], Field(description="Optional search keyword")] = None,
-        limit: Annotated[int, Field(description="Max results (default 100)")] = 100,
+        duration: Annotated[Dict[str, Any], Field(description="Duration dict with start/end")],
+        instance_id: Annotated[str, Field(description="Instance ID")],
     ) -> Dict[str, Any]:
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
-            data = await backend.list_processes(service_id=service_id, keyword=keyword, limit=limit)
+            data = await backend.list_processes(duration=duration, instance_id=instance_id)
             return {"data": data}
         except Exception as e:
             logger.error("list_processes failed", error=str(e))
@@ -227,6 +227,7 @@ def register_skywalking_tools(mcp, logger, tool_prefix: str = "") -> None:
         try:
             settings = SkyWalkingSettings()  # type: ignore
             backend = SkyWalkingBackend(settings)
+            # tools may pass an optional duration in future; keep single-arg signature for now
             data = await backend.get_trace_detail(trace_id=trace_id)
             return {"data": data}
         except Exception as e:
