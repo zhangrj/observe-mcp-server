@@ -11,3 +11,5 @@ wheels/
 
 # configuration file
 .env
+config/openobserve_stream_catalog.json.example
+config/prometheus_aliases.json.example
