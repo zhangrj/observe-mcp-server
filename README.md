@@ -110,6 +110,57 @@ Notes:
 - Boolean values are read as strings; the loader treats `true`, `True`, `1` as truthy in typical environments.
 
 
+Configuration Files
+-------------------
+The project supports optional JSON configuration files under the `config/` directory to enhance query capabilities with business-friendly aliases and stream metadata.
+
+### Prometheus Aliases (`config/prometheus_aliases.json`)
+This file maps business-friendly metric aliases to actual Prometheus metric names and recommended query patterns. It enables the `resolve_alias` tool to translate user-friendly terms into executable PromQL queries.
+
+**Structure:**
+```json
+{
+  "alias_name": {
+    "description": "Human-readable description of the metric",
+    "target_metrics": ["actual_metric_name_1", "actual_metric_name_2"],
+    "recommended_filters": ["label_matcher1", "label_matcher2"],
+    "recommended_query_patterns": ["complete_promql_expression"]
+  }
+}
+```
+
+**Example entries:**
+- `error_rate`: Maps to HTTP error rate calculations using `http_requests_total` or `http_server_requests_total` with status code filtering.
+- `qps`: Maps to request rate queries using `rate()` function on request counter metrics.
+
+**Usage:** When a user queries for "error rate" or "QPS", the `resolve_alias` tool automatically resolves these to the appropriate PromQL expressions based on this configuration.
+
+**Configuration:** The path can be customized via the `PROMETHEUS_ALIAS_PATH` environment variable (default: `config/prometheus_aliases.json`).
+
+### OpenObserve Stream Catalog (`config/openobserve_stream_catalog.json`)
+This file provides metadata about OpenObserve log streams, including descriptions, searchable keywords, and alternative names (aliases). It enhances stream discovery and helps users find the right log stream for their queries.
+
+**Structure:**
+```json
+{
+  "stream_name": {
+    "desc": "Detailed description of the stream's purpose and content",
+    "keywords": ["keyword1", "keyword2", "context_tag"],
+    "aliases": ["alternative name 1", "alternative name 2"]
+  }
+}
+```
+
+**Usage:** The stream catalog metadata assists the `openobserve_stream_list` tool in providing richer context when listing available streams, making it easier for users to identify the correct stream based on environment (dev/sit/bms), component (apisix/business logs), or cluster name.
+
+**Configuration:** The path can be customized via the `OPENOBSERVE_STREAM_CATALOG_PATH` environment variable (default: empty, meaning no catalog file is loaded). If not set, stream listing will still work but without enhanced metadata.
+
+**Best Practices:**
+- Keep keywords specific and relevant to help AI agents match user queries accurately.
+- Include common abbreviations and alternative naming conventions in the `aliases` array.
+- Use clear, descriptive text in the `desc` field to provide context about the stream's purpose.
+
+
 Testing
 -------
 Install test dependencies and run the test suite from the project root:
