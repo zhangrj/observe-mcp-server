@@ -13,10 +13,10 @@ class FakeBackend:
     async def list_services(self, layer=None):
         return {"listServices": [{"id": "S1", "name": "usersvc"}]}
 
-    async def query_traces(self, request):
+    async def query_traces(self, request, debug: bool = False):
         return {"queryTraces": {"total": 1, "results": [{"traceId": "t1", "spans": []}]}}
 
-    async def get_trace_detail(self, trace_id: str, start: str, end: str, step: str):
+    async def get_trace_detail(self, trace_id: str, start: str, end: str, step: str, debug: bool = False):
         return {"trace": {"traceId": trace_id, "spans": []}}
 
 
@@ -63,7 +63,7 @@ def test_list_layers_and_query_traces(monkeypatch):
 
     query_func = dmcp.tools.get("query_traces")
     assert query_func is not None
-    qres = asyncio.run(query_func(service_id="S1", start="-1h", end="now"))
+    qres = asyncio.run(query_func(service_id="S1", start_utc="-1h", end_utc="now", step="HOUR"))
     assert isinstance(qres, dict)
     assert "data" in qres
 
