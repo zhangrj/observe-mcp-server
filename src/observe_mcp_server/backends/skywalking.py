@@ -134,7 +134,7 @@ class SkyWalkingBackend:
         end: Optional[str] = None,
         step: Optional[str] = None,
     ) -> Dict[str, Any]:
-        query = """
+        query_with_duration = """
         query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!, $duration: Duration) {
           findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit, duration: $duration) {
             id
@@ -142,14 +142,25 @@ class SkyWalkingBackend:
           }
         }
         """
-        duration = self._build_duration(start, end, step)
-        vars_: Dict[str, Any] = {
-            "serviceId": service_id,
-            "keyword": keyword,
-            "limit": limit,
-            "duration": duration,
+        query_without_duration = """
+        query FindEndpoints($keyword: String, $serviceId: ID!, $limit: Int!) {
+          findEndpoint(keyword: $keyword, serviceId: $serviceId, limit: $limit) {
+            id
+            name
+          }
         }
-        return await self._post_graphql(query, variables=vars_)
+        """
+        duration = self._build_duration(start, end, step)
+        # v10.3.0+ supports optional duration in findEndpoint, but older versions may not recognize the argument
+        if duration is not None:
+            try:
+                return await self._post_graphql(query_with_duration, {"serviceId": service_id, "keyword": keyword, "limit": limit, "duration": duration})
+            except RuntimeError as e:
+                msg = str(e)
+                if "Unknown field argument 'duration'" not in msg:      
+                    raise
+        return await self._post_graphql(query_without_duration, {"serviceId": service_id, "keyword": keyword, "limit": limit})
+
 
     async def list_processes(self, start: str, end: str, step: str, instance_id: str) -> Dict[str, Any]:
         query = """
@@ -174,9 +185,10 @@ class SkyWalkingBackend:
         return await self._query_traces_v1(condition=condition, debug=debug)
 
     async def _query_traces_v1(self, condition: Dict[str, Any], debug: bool = False) -> Dict[str, Any]:
+        # debug arg is ignored in V1 since it only supports in version v10.1+
         query = """
-        query QueryBasicTraces($condition: TraceQueryCondition, $debug: Boolean) {
-          queryBasicTraces(condition: $condition, debug: $debug) {
+        query QueryBasicTraces($condition: TraceQueryCondition) {
+          queryBasicTraces(condition: $condition) {
             traces {
               segmentId
               endpointNames
@@ -188,7 +200,7 @@ class SkyWalkingBackend:
           }
         }
         """
-        vars_ = {"condition": condition, "debug": debug}
+        vars_ = {"condition": condition}
         return await self._post_graphql(query, variables=vars_)
 
     async def _query_traces_v2(self, condition: Dict[str, Any], debug: bool = False) -> Dict[str, Any]:
@@ -227,9 +239,11 @@ class SkyWalkingBackend:
     ) -> Dict[str, Any]:
         duration = self._build_duration(start, end, step)
 
-        query = """
-        query GetTrace($traceId: ID!, $duration: Duration, $debug: Boolean) {
-          queryTrace(traceId: $traceId, duration: $duration, debug: $debug) {
+        # debug arg only supports in version v10.1+, not use
+        # duration arg only supports in version v10.3+
+        query_with_duration = """
+        query GetTrace($traceId: ID!, $duration: Duration) {
+          queryTrace(traceId: $traceId, duration: $duration) {
             spans {
               traceId
               segmentId
@@ -285,9 +299,69 @@ class SkyWalkingBackend:
           }
         }
         """
-        vars_: Dict[str, Any] = {
-            "traceId": trace_id,
-            "duration": duration,
-            "debug": debug,
+        query_without_duration = """
+        query GetTrace($traceId: ID!) {
+          queryTrace(traceId: $traceId) {
+            spans {
+              traceId
+              segmentId
+              spanId
+              parentSpanId
+              refs {
+                traceId
+                parentSegmentId
+                parentSpanId
+                type
+              }
+              serviceCode
+              serviceInstanceName
+              startTime
+              endTime
+              endpointName
+              type
+              peer
+              component
+              isError
+              layer
+              tags {
+                key
+                value
+              }
+              logs {
+                time
+                data {
+                  key
+                  value
+                }
+              }
+              attachedEvents {
+                startTime {
+                  seconds
+                  nanos
+                }
+                event
+                endTime {
+                  seconds
+                  nanos
+                }
+                tags {
+                  key
+                  value
+                }
+                summary {
+                  key
+                  value
+                }
+              }
+            }
+          }
         }
-        return await self._post_graphql(query, variables=vars_)
+        """
+        if duration is not None:
+            try:
+                return await self._post_graphql(query_with_duration, variables={"traceId": trace_id, "duration": duration})
+            except RuntimeError as e:
+                msg = str(e)
+                if "Unknown field argument 'duration'" not in msg:      
+                    raise
+        return await self._post_graphql(query_without_duration, variables={"traceId": trace_id})
