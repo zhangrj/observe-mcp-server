@@ -1,0 +1,12 @@
+{
+  "dev_log": {
+    "desc": "XXX project dev cluster business logs",
+    "keywords": ["XXX", "dev", "business logs"],
+    "aliases": ["dev logs"]
+  },
+  "sit_log": {
+    "desc": "XXX project sit cluster business logs",
+    "keywords": ["XXX", "sit", "business logs"],
+    "aliases": ["sit logs"]
+  }
+}

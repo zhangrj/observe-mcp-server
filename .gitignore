@@ -5,12 +5,20 @@ build/
 dist/
 wheels/
 *.egg-info
-Dockerfile.local
 
 # Virtual environments
 .venv
 
 # configuration file
 .env
-config/openobserve_stream_catalog.json.example
-config/prometheus_aliases.json.example
+config/openobserve_stream_catalog.json
+config/prometheus_aliases.json
+
+# vscode settings
+.vscode
+
+# Dockerfile
+Dockerfile.local
+
+# pytest
+.pytest_cache
