@@ -57,7 +57,7 @@ def _load_stream_catalog(path: str) -> Dict[str, Any]:
 
 def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
     """
-    Register Phase-1 OpenObserve tools.
+    Register OpenObserve tools.
 
     Tools:
       - {prefix}openobserve_stream_list
@@ -82,7 +82,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "openWorldHint": True,
         },
         tags={"openobserve", "streams", "discovery"},
-        meta={"backend": "openobserve", "phase": "1"},
+        meta={"backend": "openobserve"},
     )
     async def openobserve_stream_list(
         stream_type: Annotated[
@@ -138,7 +138,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "openWorldHint": True,
         },
         tags={"openobserve", "logs", "query"},
-        meta={"backend": "openobserve", "phase": "1"},
+        meta={"backend": "openobserve"},
     )
     async def openobserve_logs_query(
         stream: Annotated[
@@ -312,7 +312,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "openWorldHint": True,
         },
         tags={"openobserve", "stream", "schema"},
-        meta={"backend": "openobserve", "phase": "1"},
+        meta={"backend": "openobserve"},
     )
     async def openobserve_list_stream_schema(
         stream: Annotated[
@@ -355,7 +355,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "openWorldHint": True,
         },
         tags={"openobserve", "values", "discovery"},
-        meta={"backend": "openobserve", "phase": "2"},
+        meta={"backend": "openobserve"},
     )
     async def openobserve_field_values(
         stream: Annotated[str, Field(description="Stream name, e.g., k8s")],
@@ -413,7 +413,7 @@ def register_openobserve_tools(mcp, logger, tool_prefix: str = "") -> None:
             "openWorldHint": True,
         },
         tags={"openobserve", "lint", "safety"},
-        meta={"backend": "openobserve", "phase": "2"},
+        meta={"backend": "openobserve"},
     )
     async def openobserve_sql_lint(
         stream: Annotated[str, Field(description="Stream name, e.g., k8s")],

@@ -86,7 +86,7 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
     @mcp.tool(
         name=tool_name("get_metric_catalog"),
         description=(
-            "Return a paginated metric catalog summary (name/type/help/label_keys). Uses Prometheus '/api/v1/label/__name__/values'"
+            "[Prometheus] Return a paginated metric catalog summary (name/type/help/label_keys). Uses Prometheus '/api/v1/label/__name__/values'"
         ),
         annotations={
             "title": "Prometheus: Get Metric Catalog",
@@ -96,7 +96,7 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
             "openWorldHint": True,
         },
         tags={"prometheus", "catalog"},
-        meta={"backend": "prometheus", "phase": "2"},
+        meta={"backend": "prometheus"},
     )
     async def get_metric_catalog(
         prefix: Annotated[Optional[str], Field(description="Optional metric name prefix") ] = None,
@@ -141,10 +141,10 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
 
     @mcp.tool(
         name=tool_name("get_metric_schema"),
-        description=("Return label keys and light schema hints for a single metric. Includes small label value preview if requested."),
+        description=("[Prometheus] Return label keys and light schema hints for a single metric. Includes small label value preview if requested."),
         annotations={"title": "Prometheus: Get Metric Schema", "readOnlyHint": True},
         tags={"prometheus", "schema"},
-        meta={"backend": "prometheus", "phase": "2"},
+        meta={"backend": "prometheus"},
     )
     async def get_metric_schema(
         metric_name: Annotated[str, Field(description="Metric name to inspect")],
@@ -192,10 +192,10 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
 
     @mcp.tool(
         name=tool_name("search_label_values"),
-        description=("Return a preview of label values for a given metric and label name. Returns top-N sample values."),
+        description=("[Prometheus] Return a preview of label values for a given metric and label name. Returns top-N sample values."),
         annotations={"title": "Prometheus: Search Label Values", "readOnlyHint": True},
         tags={"prometheus", "labels"},
-        meta={"backend": "prometheus", "phase": "2"},
+        meta={"backend": "prometheus"},
     )
     async def search_label_values(
         metric_name: Annotated[Optional[str], Field(description="Optional metric to limit search") ] = None,
@@ -239,10 +239,10 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
 
     @mcp.tool(
         name=tool_name("resolve_alias"),
-        description=("Resolve a business alias / intent to candidate metrics and recommended query patterns."),
+        description=("[Prometheus] Resolve a business alias / intent to candidate metrics and recommended query patterns."),
         annotations={"title": "Prometheus: Resolve Alias", "readOnlyHint": True},
         tags={"prometheus", "alias"},
-        meta={"backend": "prometheus", "phase": "2"},
+        meta={"backend": "prometheus"},
     )
     async def resolve_alias(
         alias_or_intent: Annotated[str, Field(description="Business term or short intent")],
@@ -268,10 +268,10 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
 
     @mcp.tool(
         name=tool_name("lint_promql"),
-        description=("Lightweight PromQL lint: basic sanity checks and simple advice. Not a full parser.") ,
+        description=("[Prometheus] Lightweight PromQL lint: basic sanity checks and simple advice. Not a full parser.") ,
         annotations={"title": "Prometheus: Lint PromQL", "readOnlyHint": True},
         tags={"prometheus", "lint"},
-        meta={"backend": "prometheus", "phase": "2"},
+        meta={"backend": "prometheus"},
     )
     async def lint_promql(
         query: Annotated[str, Field(description="PromQL to lint")],
@@ -296,10 +296,10 @@ def register_prometheus_tools(mcp, logger, tool_prefix: str = "") -> None:
 
     @mcp.tool(
         name=tool_name("execute_promql"),
-        description=("Execute PromQL (instant or range) with simple guardrails. Returns raw Prometheus response."),
+        description=("[Prometheus] Execute PromQL (instant or range) with simple guardrails. Returns raw Prometheus response."),
         annotations={"title": "Prometheus: Execute PromQL", "readOnlyHint": True},
         tags={"prometheus", "query"},
-        meta={"backend": "prometheus", "phase": "2"},
+        meta={"backend": "prometheus"},
     )
     async def execute_promql(
         query: Annotated[str, Field(description="PromQL expression")],
