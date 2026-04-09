@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+Dockerfile.local
 
 # Virtual environments
 .venv

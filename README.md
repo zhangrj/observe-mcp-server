@@ -66,22 +66,46 @@ observe-mcp-server --transport sse --host 0.0.0.0 --port 8000 --path /mcp
 
 Configuration
 -------------
-Environment variables are the primary configuration mechanism. Example variables:
+Environment variables are the primary configuration mechanism. The table below lists supported environment variables, whether they are optional, and their default values.
 
-```bash
-# Enable Prometheus tools
-export OBSERVE_ENABLE_PROMETHEUS=true
+| Variable | Description | Optional | Default |
+|---|---:|---:|---|
+| `OBSERVE_MCP_LOG_LEVEL` | Log level for the service | yes | `INFO` |
+| `OBSERVE_MCP_TRANSPORT` | MCP transport: `stdio` `sse` `streamable-http` | yes | `stdio` |
+| `OBSERVE_MCP_BIND_HOST` | Host address to bind (when using streamable-http or sse) | yes | `127.0.0.1` |
+| `OBSERVE_MCP_BIND_PORT` | Port to bind the MCP server (when using streamable-http or sse) | yes | `8000` |
+| `OBSERVE_MCP_PATH` | HTTP path for MCP endpoint (when using streamable-http or sse) | yes | `/mcp` |
+| `OBSERVE_ENABLE_OPENOBSERVE` | Enable OpenObserve tools (logs) | yes | `true` |
+| `OBSERVE_ENABLE_PROMETHEUS` | Enable Prometheus tools | yes | `true` |
+| `OBSERVE_ENABLE_SKYWALKING` | Enable SkyWalking tools | yes | `true` |
+| `OBSERVE_TOOL_PREFIX` | Prefix applied to all tool names (optional) | yes | (empty) |
+| `PROMETHEUS_URL` | Prometheus HTTP API base URL | yes* | `http://prometheus.example:9090` |
+| `PROMETHEUS_TOKEN` | Prometheus bearer token (optional) | yes | (empty) |
+| `PROMETHEUS_USERNAME` | Prometheus basic auth username (optional) | yes | (empty) |
+| `PROMETHEUS_PASSWORD` | Prometheus basic auth password (optional) | yes | (empty) |
+| `PROMETHEUS_ALIAS_PATH` | Path to alias JSON file (optional) | yes | `config/prometheus_aliases.json` |
+| `PROMETHEUS_CATALOG_TTL_SECONDS` | Cache TTL for metric catalog (seconds) | yes | `600` |
+| `PROMETHEUS_SCHEMA_TTL_SECONDS` | Cache TTL for metric schema (seconds) | yes | `600` |
+| `PROMETHEUS_LABEL_PREVIEW_TTL_SECONDS` | Cache TTL for label preview (seconds) | yes | `180` |
+| `PROMETHEUS_ALIAS_TTL_SECONDS` | Cache TTL for alias mapping (seconds) | yes | `1800` |
+| `OPENOBSERVE_BASE_URL` | OpenObserve API base URL (logs only) | yes* | `http://localhost:5080` |
+| `OPENOBSERVE_ORG` | Organization/tenant for OpenObserve | yes | `default` |
+| `OPENOBSERVE_USERNAME` | OpenObserve username (optional) | yes | (empty) |
+| `OPENOBSERVE_PASSWORD` | OpenObserve password (optional) | yes | (empty) |
+| `OPENOBSERVE_VERIFY_SSL` | Verify TLS for OpenObserve endpoints | yes | `true` |
+| `OPENOBSERVE_TIMEOUT_SECONDS` | Request timeout (seconds) for OpenObserve | yes | `30` |
+| `OPENOBSERVE_MAX_PAGE_SIZE` | Max page size for OpenObserve list/preview | yes | `500` |
+| `OPENOBSERVE_STREAM_CATALOG_PATH` | Optional local stream catalog JSON path | yes | (empty) |
+| `SKYWALKING_BASE_URL` | SkyWalking GraphQL endpoint | yes* | `http://localhost:12800/graphql` |
+| `SKYWALKING_TOKEN` | SkyWalking bearer token (optional) | yes | (empty) |
+| `SKYWALKING_TIMEOUT_SECONDS` | Request timeout (seconds) for SkyWalking | yes | `30` |
 
-# Prometheus base URL
-export PROMETHEUS_URL="http://prometheus.example:9090"
+Notes:
 
-# Optional alias file
-export PROMETHEUS_ALIAS_PATH="config/prometheus_aliases.json"
+- Variables marked with `yes*` are optional only if the corresponding toolset is disabled; if you enable a toolset, provide the service endpoint variables (for example, `PROMETHEUS_URL` when `OBSERVE_ENABLE_PROMETHEUS=true`).
+- File paths such as `PROMETHEUS_ALIAS_PATH` and `OPENOBSERVE_STREAM_CATALOG_PATH` are optional; if provided they are read lazily at runtime.
+- Boolean values are read as strings; the loader treats `true`, `True`, `1` as truthy in typical environments.
 
-# SkyWalking GraphQL endpoint and optional token
-export SKYWALKING_BASE_URL="http://localhost:12800/graphql"
-export SKYWALKING_TOKEN=""
-```
 
 Testing
 -------

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observe-mcp-env
+data:
+  # Example environment variables (override in your environment)
+  OBSERVE_ENABLE_PROMETHEUS: "true"
+  PROMETHEUS_URL: "http://prometheus:9090"
+  PROMETHEUS_ALIAS_PATH: "/app/config/prometheus_aliases.json"
+  SKYWALKING_BASE_URL: "http://skywalking:12800/graphql"
+  SKYWALKING_TOKEN: ""
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observe-mcp-config
+data:
+  # Mount your actual config files here. These are placeholders to ensure the
+  # config volume contains files; replace contents as needed.
+  prometheus_aliases.json: |
+    {}
+  openobserve_stream_catalog.json: |
+    {}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: observe-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: observe-mcp
+  template:
+    metadata:
+      labels:
+        app: observe-mcp
+    spec:
+      containers:
+        - name: observe-mcp
+          image: your-registry/observe-mcp-server:latest
+          imagePullPolicy: IfNotPresent
+          command: ["observe-mcp-server", "--transport", "streamable-http", "--host", "0.0.0.0", "--port", "8000", "--path", "/mcp"]
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: observe-mcp-env
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: observe-mcp-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: observe-mcp
+spec:
+  selector:
+    app: observe-mcp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

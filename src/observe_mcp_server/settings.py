@@ -18,6 +18,7 @@ class MCPSettings(BaseSettings):
         extra="ignore",
     )
 
+    log_level: str = "INFO"
     transport: Transport = "stdio"
     bind_host: str = "127.0.0.1"
     bind_port: int = 8000
@@ -36,7 +37,7 @@ class ToolsetSettings(BaseSettings):
 
     enable_openobserve: bool = True
     enable_prometheus: bool = True
-    enable_skywalking: bool = False
+    enable_skywalking: bool = True
 
     # Optional prefix applied to all tool names (e.g. "staging_")
     tool_prefix: str = ""
@@ -65,7 +66,6 @@ class OpenObserveSettings(BaseSettings):
     stream_catalog_path: str = ""  # If set, used for describe streams; should be a JSON file with stream metadata
 
 
-# Future placeholders (Phase-2)
 class PrometheusSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="PROMETHEUS_",
