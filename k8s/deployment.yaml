@@ -3,12 +3,81 @@ kind: ConfigMap
 metadata:
   name: observe-mcp-env
 data:
-  # Example environment variables (override in your environment)
+  # -----------------------------
+  # MCP runtime
+  # -----------------------------
+  # Log level for the service. Optional. Default: "INFO"
+  OBSERVE_MCP_LOG_LEVEL: "INFO"
+  # Transport for MCP (stdio | sse | streamable-http). Optional. Default: "stdio"
+  OBSERVE_MCP_TRANSPORT: "stdio"
+  # Host to bind the MCP server (when using streamable-http or sse). Optional. Default: "127.0.0.1"
+  OBSERVE_MCP_BIND_HOST: "127.0.0.1"
+  # Port to bind the MCP server (when using streamable-http or sse). Optional. Default: 8000
+  OBSERVE_MCP_BIND_PORT: "8000"
+  # Path for the MCP HTTP endpoint (when using streamable-http or sse). Optional. Default: /mcp
+  OBSERVE_MCP_PATH: "/mcp"
+
+  # Enable toolsets (true/false). All optional (default: true)
+  OBSERVE_ENABLE_OPENOBSERVE: "true"
   OBSERVE_ENABLE_PROMETHEUS: "true"
-  PROMETHEUS_URL: "http://prometheus:9090"
-  PROMETHEUS_ALIAS_PATH: "/app/config/prometheus_aliases.json"
-  SKYWALKING_BASE_URL: "http://skywalking:12800/graphql"
+  OBSERVE_ENABLE_SKYWALKING: "true"
+
+  # Optional: add a prefix for ALL tool names (default: empty)
+  OBSERVE_TOOL_PREFIX: ""
+
+  # -----------------------------
+  # Prometheus connection
+  # -----------------------------
+  # Base URL for Prometheus HTTP API. REQUIRED when `OBSERVE_ENABLE_PROMETHEUS=true`. No default value.
+  PROMETHEUS_URL: "http://localhost:9090"
+  # Optional authentication (token or basic auth). Defaults: empty
+  PROMETHEUS_TOKEN: ""
+  PROMETHEUS_USERNAME: ""
+  PROMETHEUS_PASSWORD: ""
+  # Verify TLS for Prometheus endpoints (true/false). Optional. Default: true
+  PROMETHEUS_VERIFY_SSL: "true"
+  # Request timeout in seconds for Prometheus. Optional. Default: 30
+  PROMETHEUS_TIMEOUT_SECONDS: "30"
+
+  # Optional: path to alias mapping JSON (relative or absolute). Default: config/prometheus_aliases.json
+  PROMETHEUS_ALIAS_PATH: "config/prometheus_aliases.json"
+
+  # Optional cache TTL overrides (seconds). Defaults shown below:
+  PROMETHEUS_CATALOG_TTL_SECONDS: "600"
+  PROMETHEUS_SCHEMA_TTL_SECONDS: "600"
+  PROMETHEUS_LABEL_PREVIEW_TTL_SECONDS: "180"
+  PROMETHEUS_ALIAS_TTL_SECONDS: "1800"
+
+  # -----------------------------
+  # OpenObserve (logs only)
+  # -----------------------------
+  # Base URL for OpenObserve API (logs only). REQUIRED when `OBSERVE_ENABLE_OPENOBSERVE=true`. No default value.
+  OPENOBSERVE_BASE_URL: "http://localhost:5080"
+  # Organization / tenant for OpenObserve. Optional. Default: default
+  OPENOBSERVE_ORG: "default"
+  # Credentials for OpenObserve (HTTP Basic auth). REQUIRED when `OBSERVE_ENABLE_OPENOBSERVE=true`. No default values.
+  OPENOBSERVE_USERNAME: "admin@admin.com"
+  OPENOBSERVE_PASSWORD: "admin"
+  # Verify TLS for OpenObserve endpoints (true/false). Optional. Default: true
+  OPENOBSERVE_VERIFY_SSL: "true"
+  # Request timeout in seconds for OpenObserve. Optional. Default: 30
+  OPENOBSERVE_TIMEOUT_SECONDS: "30"
+  # Max page size when listing/previewing. Optional. Default: 500
+  OPENOBSERVE_MAX_PAGE_SIZE: "500"
+  # Optional path to a local stream catalog JSON (used for describe streams). Default: empty
+  OPENOBSERVE_STREAM_CATALOG_PATH: ""
+
+  # -----------------------------
+  # SkyWalking (GraphQL)
+  # -----------------------------
+  # GraphQL endpoint for SkyWalking. REQUIRED when `OBSERVE_ENABLE_SKYWALKING=true`. No default value.
+  SKYWALKING_BASE_URL: "http://localhost:12800/graphql"
+  # Optional bearer token for SkyWalking GraphQL
   SKYWALKING_TOKEN: ""
+  # Verify TLS for SkyWalking endpoints (true/false). Optional. Default: true
+  SKYWALKING_VERIFY_SSL: "true"
+  # Request timeout in seconds for SkyWalking. Optional. Default: 30
+  SKYWALKING_TIMEOUT_SECONDS: "30"
 
 ---
 apiVersion: v1
@@ -16,12 +85,34 @@ kind: ConfigMap
 metadata:
   name: observe-mcp-config
 data:
-  # Mount your actual config files here. These are placeholders to ensure the
-  # config volume contains files; replace contents as needed.
+  # Mount your actual config files here. For example:
   prometheus_aliases.json: |
-    {}
+    {
+      "error_rate": {
+        "description": "Common error rate patterns for HTTP errors",
+        "target_metrics": ["http_requests_total", "http_server_requests_total"],
+        "recommended_filters": ["status=~\"5..\""],
+        "recommended_query_patterns": ["sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"]
+      },
+      "qps": {
+        "description": "Queries per second (request rate)",
+        "target_metrics": ["http_requests_total", "requests_total"],
+        "recommended_query_patterns": ["sum(rate(http_requests_total[1m]))"]
+      }
+    }
   openobserve_stream_catalog.json: |
-    {}
+    {
+      "dev_log": {
+        "desc": "XXX project dev cluster business logs",
+        "keywords": ["XXX", "dev", "business logs"],
+        "aliases": ["dev logs"]
+      },
+      "sit_log": {
+        "desc": "XXX project sit cluster business logs",
+        "keywords": ["XXX", "sit", "business logs"],
+        "aliases": ["sit logs"]
+      }
+    }
 
 ---
 apiVersion: apps/v1

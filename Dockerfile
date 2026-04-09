@@ -1,4 +1,4 @@
-FROM ev-harbor.shell.com.cn/tools/python:3.11-alpine AS builder
+FROM python:3.11-alpine AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -11,18 +11,12 @@ RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip install --upgrade pip && \
     pip wheel --no-cache-dir --prefer-binary -w /wheels .
 
-FROM ev-harbor.shell.com.cn/tools/python:3.11-alpine AS runtime
+FROM python:3.11-alpine AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    OBSERVE_ENABLE_PROMETHEUS="false" \
-    PROMETHEUS_URL="" \
-    PROMETHEUS_ALIAS_PATH="/app/config/prometheus_aliases.json" \
-    SKYWALKING_BASE_URL="" \
-    SKYWALKING_TOKEN="" \
-    SERVICE_PORT="8000"
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
