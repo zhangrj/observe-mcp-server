@@ -10,7 +10,7 @@ class FakeResponse:
         self._json = json_data or {}
         self.text = text
 
-    async def json(self):
+    def json(self):
         return self._json
 
     def raise_for_status(self):
@@ -19,7 +19,7 @@ class FakeResponse:
 
 
 class FakeAsyncClient:
-    def __init__(self, responses=None):
+    def __init__(self, responses=None, **kwargs):
         self._responses = list(responses or [])
         self._requests = []
 
