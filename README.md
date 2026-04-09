@@ -79,30 +79,33 @@ Environment variables are the primary configuration mechanism. The table below l
 | `OBSERVE_ENABLE_PROMETHEUS` | Enable Prometheus tools | yes | `true` |
 | `OBSERVE_ENABLE_SKYWALKING` | Enable SkyWalking tools | yes | `true` |
 | `OBSERVE_TOOL_PREFIX` | Prefix applied to all tool names (optional) | yes | (empty) |
-| `PROMETHEUS_URL` | Prometheus HTTP API base URL | yes* | `http://prometheus.example:9090` |
+| `PROMETHEUS_URL` | Prometheus HTTP API base URL | REQUIRED when `OBSERVE_ENABLE_PROMETHEUS=true` | (no default) |
 | `PROMETHEUS_TOKEN` | Prometheus bearer token (optional) | yes | (empty) |
 | `PROMETHEUS_USERNAME` | Prometheus basic auth username (optional) | yes | (empty) |
 | `PROMETHEUS_PASSWORD` | Prometheus basic auth password (optional) | yes | (empty) |
+| `PROMETHEUS_VERIFY_SSL` | Verify TLS for Prometheus endpoints | yes | `true` |
+| `PROMETHEUS_TIMEOUT_SECONDS` | Request timeout (seconds) for Prometheus | yes | `30` |
 | `PROMETHEUS_ALIAS_PATH` | Path to alias JSON file (optional) | yes | `config/prometheus_aliases.json` |
 | `PROMETHEUS_CATALOG_TTL_SECONDS` | Cache TTL for metric catalog (seconds) | yes | `600` |
 | `PROMETHEUS_SCHEMA_TTL_SECONDS` | Cache TTL for metric schema (seconds) | yes | `600` |
 | `PROMETHEUS_LABEL_PREVIEW_TTL_SECONDS` | Cache TTL for label preview (seconds) | yes | `180` |
 | `PROMETHEUS_ALIAS_TTL_SECONDS` | Cache TTL for alias mapping (seconds) | yes | `1800` |
-| `OPENOBSERVE_BASE_URL` | OpenObserve API base URL (logs only) | yes* | `http://localhost:5080` |
+| `OPENOBSERVE_BASE_URL` | OpenObserve API base URL (logs only) | REQUIRED when `OBSERVE_ENABLE_OPENOBSERVE=true` | (no default) |
 | `OPENOBSERVE_ORG` | Organization/tenant for OpenObserve | yes | `default` |
-| `OPENOBSERVE_USERNAME` | OpenObserve username (optional) | yes | (empty) |
-| `OPENOBSERVE_PASSWORD` | OpenObserve password (optional) | yes | (empty) |
+| `OPENOBSERVE_USERNAME` | OpenObserve username (HTTP Basic auth) | REQUIRED when `OBSERVE_ENABLE_OPENOBSERVE=true` | (no default) |
+| `OPENOBSERVE_PASSWORD` | OpenObserve password (HTTP Basic auth) | REQUIRED when `OBSERVE_ENABLE_OPENOBSERVE=true` | (no default) |
 | `OPENOBSERVE_VERIFY_SSL` | Verify TLS for OpenObserve endpoints | yes | `true` |
 | `OPENOBSERVE_TIMEOUT_SECONDS` | Request timeout (seconds) for OpenObserve | yes | `30` |
 | `OPENOBSERVE_MAX_PAGE_SIZE` | Max page size for OpenObserve list/preview | yes | `500` |
 | `OPENOBSERVE_STREAM_CATALOG_PATH` | Optional local stream catalog JSON path | yes | (empty) |
-| `SKYWALKING_BASE_URL` | SkyWalking GraphQL endpoint | yes* | `http://localhost:12800/graphql` |
+| `SKYWALKING_BASE_URL` | SkyWalking GraphQL endpoint | REQUIRED when `OBSERVE_ENABLE_SKYWALKING=true` | (no default) |
 | `SKYWALKING_TOKEN` | SkyWalking bearer token (optional) | yes | (empty) |
+| `SKYWALKING_VERIFY_SSL` | Verify TLS for SkyWalking endpoints | yes | `true` |
 | `SKYWALKING_TIMEOUT_SECONDS` | Request timeout (seconds) for SkyWalking | yes | `30` |
 
 Notes:
 
-- Variables marked with `yes*` are optional only if the corresponding toolset is disabled; if you enable a toolset, provide the service endpoint variables (for example, `PROMETHEUS_URL` when `OBSERVE_ENABLE_PROMETHEUS=true`).
+- Variables marked as "REQUIRED when `OBSERVE_ENABLE_* = true`" must be provided if the corresponding toolset is enabled; otherwise they can be omitted.
 - File paths such as `PROMETHEUS_ALIAS_PATH` and `OPENOBSERVE_STREAM_CATALOG_PATH` are optional; if provided they are read lazily at runtime.
 - Boolean values are read as strings; the loader treats `true`, `True`, `1` as truthy in typical environments.
 

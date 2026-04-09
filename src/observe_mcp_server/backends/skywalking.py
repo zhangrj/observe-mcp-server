@@ -26,25 +26,20 @@ class SkyWalkingBackend:
         return base
 
     def _headers(self) -> Dict[str, str]:
-        h: Dict[str, str] = {
+        headers: Dict[str, str] = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
         if self.settings.token:
-            try:
-                token = self.settings.token.get_secret_value()  # type: ignore
-            except Exception:
-                token = str(self.settings.token)
-            if token:
-                h["Authorization"] = f"Bearer {token}"
-        return h
+            headers["Authorization"] = f"Bearer {self.settings.token.get_secret_value()}"
+        return headers
 
     async def _post_graphql(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         payload: Dict[str, Any] = {"query": query}
         if variables is not None:
             payload["variables"] = variables
 
-        async with httpx.AsyncClient(timeout=self.settings.timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=self.settings.timeout_seconds, verify=self.settings.verify_ssl) as client:
             resp = await client.post(self._url(), json=payload, headers=self._headers())
             if resp.status_code >= 400:
                 text = (resp.text or "")[:1000]

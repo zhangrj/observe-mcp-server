@@ -89,9 +89,6 @@ class PrometheusSettings(BaseSettings):
     label_preview_ttl_seconds: int = 180
     alias_ttl_seconds: int = 1800
 
-    # Execution guardrails
-    max_series_limit: int = 2000
-
 
 class SkyWalkingSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -103,4 +100,5 @@ class SkyWalkingSettings(BaseSettings):
 
     base_url: AnyHttpUrl
     token: Optional[SecretStr] = None
+    verify_ssl: bool = True
     timeout_seconds: float = 30.0
