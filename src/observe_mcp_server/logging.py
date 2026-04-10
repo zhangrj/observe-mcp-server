@@ -6,14 +6,13 @@ import sys
 import structlog
 
 
-def setup_logging(logger_name: str = "observe_mcp_server") -> structlog.BoundLogger:
+def setup_logging(logger_name: str = "observe_mcp_server", level_str: str = "INFO") -> structlog.BoundLogger:
     """Configure structured JSON logging to stderr.
 
     - Do NOT log secrets (passwords/tokens).
     - Use OBSERVE_LOG_LEVEL to control verbosity.
     """
-    level_str = os.getenv("OBSERVE_LOG_LEVEL", "INFO").upper()
-    level = getattr(logging, level_str, logging.INFO)
+    level = getattr(logging, level_str.upper(), logging.INFO)
 
     structlog.configure(
         processors=[
